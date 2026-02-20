@@ -21,7 +21,7 @@ export default async function PortalSignupPage({
   try {
     const supabase = await createPortalSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) redirect('/portal/products')
+    if (user) redirect('/products')
   } catch {
     // Not logged in or env var missing — just render the signup form
   }
@@ -130,7 +130,7 @@ export default async function PortalSignupPage({
 
         <p className="mt-5 text-center text-sm" style={{ color: '#777777' }}>
           Already have an account?{' '}
-          <a href="/portal/login"
+          <a href="/"
              className="font-medium underline hover:opacity-70 transition-opacity"
              style={{ color: '#466c7e' }}>
             Sign in

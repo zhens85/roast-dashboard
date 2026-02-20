@@ -18,7 +18,7 @@ export default async function PortalLoginPage({
   try {
     const supabase = await createPortalSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) redirect('/portal/products')
+    if (user) redirect('/products')
   } catch {
     // Not logged in or env var missing — just render the login form
   }
@@ -105,14 +105,14 @@ export default async function PortalLoginPage({
         <div className="mt-5 space-y-2 text-center">
           <p className="text-sm" style={{ color: '#777777' }}>
             New partner?{' '}
-            <a href="/portal/signup"
+            <a href="/signup"
                className="font-medium underline hover:opacity-70 transition-opacity"
                style={{ color: '#466c7e' }}>
               Create an account
             </a>
           </p>
           <p className="text-sm" style={{ color: '#999' }}>
-            <a href="/portal/reset-password"
+            <a href="/reset-password"
                className="underline hover:opacity-70 transition-opacity"
                style={{ color: '#999' }}>
               Forgot your password?

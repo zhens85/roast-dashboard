@@ -100,7 +100,7 @@ export default function DashboardClient({ initialOrders }: Props) {
     }
   }
 
-  const printUrl = `/dashboard/print?orders=${Array.from(selectedIds).join(',')}`
+  const printUrl = `/admin/print?orders=${Array.from(selectedIds).join(',')}`
 
   return (
     <div className="space-y-8">

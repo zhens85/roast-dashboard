@@ -11,10 +11,10 @@ export default async function LoginPage({
   const session = cookieStore.get('roast_session')
 
   if (session?.value === 'authenticated') {
-    redirect(params.redirect ?? '/dashboard')
+    redirect(params.redirect ?? '/admin')
   }
 
-  const redirectTo = params.redirect ?? '/dashboard'
+  const redirectTo = params.redirect ?? '/admin'
   const hasError   = params.error === 'invalid'
 
   return (

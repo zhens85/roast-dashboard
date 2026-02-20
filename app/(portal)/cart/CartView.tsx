@@ -87,7 +87,7 @@ export default function CartView() {
            style={{ borderColor: '#e5e5e5' }}>
         <p className="mb-4" style={{ color: '#777777' }}>Your cart is empty.</p>
         <a
-          href="/portal/products"
+          href="/products"
           className="inline-block text-white font-semibold px-5 py-2 rounded-lg
                      transition-opacity hover:opacity-90"
           style={{ backgroundColor: '#466c7e' }}
@@ -110,7 +110,7 @@ export default function CartView() {
         </p>
         <div className="flex gap-3 justify-center">
           <a
-            href="/portal/products"
+            href="/products"
             className="text-white font-semibold px-5 py-2 rounded-lg
                        transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#466c7e' }}
@@ -118,7 +118,7 @@ export default function CartView() {
             Place Another Order
           </a>
           <a
-            href="/portal/orders"
+            href="/orders"
             className="border font-semibold px-5 py-2 rounded-lg transition-colors hover:bg-gray-50"
             style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
           >
@@ -219,7 +219,7 @@ export default function CartView() {
       {/* Actions */}
       <div className="flex gap-3">
         <a
-          href="/portal/products"
+          href="/products"
           className="flex-shrink-0 border font-medium px-4 py-3 rounded-lg transition-colors
                      hover:bg-gray-50 text-sm"
           style={{ borderColor: '#d0d0d0', color: '#466c7e' }}

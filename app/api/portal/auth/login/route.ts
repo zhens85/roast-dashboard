@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   const password = formData.get('password') as string
 
   if (!email || !password) {
-    const url = new URL('/portal/login', request.url)
+    const url = new URL('/', request.url)
     url.searchParams.set('error', 'missing')
     return NextResponse.redirect(url, { status: 303 })
   }
@@ -16,12 +16,12 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    const url = new URL('/portal/login', request.url)
+    const url = new URL('/', request.url)
     url.searchParams.set('error', 'invalid')
     return NextResponse.redirect(url, { status: 303 })
   }
 
   // @supabase/ssr automatically set the session cookies via the cookieStore.
   // Redirect to products page.
-  return NextResponse.redirect(new URL('/portal/products', request.url), { status: 303 })
+  return NextResponse.redirect(new URL('/products', request.url), { status: 303 })
 }

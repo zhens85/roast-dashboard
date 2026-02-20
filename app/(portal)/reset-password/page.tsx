@@ -39,7 +39,7 @@ export default async function ResetPasswordPage({
               It may take a minute or two to arrive.
             </div>
             <a
-              href="/portal/login"
+              href="/"
               className="block text-center text-sm underline hover:opacity-70 transition-opacity"
               style={{ color: '#466c7e' }}
             >
@@ -82,7 +82,7 @@ export default async function ResetPasswordPage({
             </button>
 
             <a
-              href="/portal/login"
+              href="/"
               className="block text-center text-sm underline hover:opacity-70 transition-opacity"
               style={{ color: '#999' }}
             >

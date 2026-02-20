@@ -1,4 +1,4 @@
-// Staff dashboard layout — sticky nav bar wrapping all /dashboard/* pages.
+// Staff dashboard layout — sticky nav bar wrapping all /admin/* pages.
 import type { ReactNode } from 'react'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-13 flex items-center justify-between gap-6">
 
           {/* Logo */}
-          <a href="/dashboard" className="flex-shrink-0 py-2">
+          <a href="/admin" className="flex-shrink-0 py-2">
             <img
               src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
               alt="Good Folks Coffee"
@@ -20,10 +20,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {/* Nav links */}
           <nav className="flex items-center gap-0.5 flex-1">
             {[
-              { href: '/dashboard',          label: 'Orders'   },
-              { href: '/dashboard/products', label: 'Products' },
-              { href: '/dashboard/partners', label: 'Partners' },
-              { href: '/dashboard/tiers',    label: 'Tiers'    },
+              { href: '/admin',          label: 'Orders'   },
+              { href: '/admin/products', label: 'Products' },
+              { href: '/admin/partners', label: 'Partners' },
+              { href: '/admin/tiers',    label: 'Tiers'    },
             ].map(({ href, label }) => (
               <a
                 key={href}

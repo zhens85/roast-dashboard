@@ -7,7 +7,7 @@ const MAX_AGE_SECS  = 60 * 60 * 8  // 8 hours
 export async function POST(request: NextRequest) {
   const formData   = await request.formData()
   const password   = formData.get('password') as string
-  const redirectTo = (formData.get('redirect') as string) || '/dashboard'
+  const redirectTo = (formData.get('redirect') as string) || '/admin'
 
   const correctPassword = process.env.DASHBOARD_PASSWORD
 

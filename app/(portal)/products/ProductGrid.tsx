@@ -259,7 +259,7 @@ export default function ProductGrid({ products, discountPct }: ProductGridProps)
       {totalCartItems > 0 && (
         <div className="fixed bottom-6 right-6 z-10">
           <a
-            href="/portal/cart"
+            href="/cart"
             className="flex items-center gap-2 text-white font-semibold px-5 py-3
                        rounded-full shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#466c7e' }}

@@ -6,5 +6,5 @@ export async function POST(request: NextRequest) {
   await supabase.auth.signOut()
 
   // @supabase/ssr clears the session cookies automatically.
-  return NextResponse.redirect(new URL('/portal/login', request.url), { status: 303 })
+  return NextResponse.redirect(new URL('/', request.url), { status: 303 })
 }

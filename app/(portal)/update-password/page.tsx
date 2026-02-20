@@ -91,7 +91,7 @@ export default function UpdatePasswordPage() {
           This password-reset link is invalid or has expired. Please request a new one.
         </p>
         <a
-          href="/portal/reset-password"
+          href="/reset-password"
           className="block text-center text-sm underline hover:opacity-70 transition-opacity"
           style={{ color: '#466c7e' }}
         >
@@ -117,7 +117,7 @@ export default function UpdatePasswordPage() {
           Your password has been changed. You can now sign in.
         </p>
         <a
-          href="/portal/login"
+          href="/"
           className="block text-center text-white font-semibold py-2.5 rounded-lg
                      transition-opacity hover:opacity-90 text-sm"
           style={{ backgroundColor: '#466c7e' }}

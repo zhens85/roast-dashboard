@@ -5,22 +5,26 @@ import { createServerClient } from '@supabase/ssr'
 const STAFF_COOKIE  = 'roast_session'
 const SESSION_TOKEN = 'authenticated'
 
-// Routes accessible without portal login
+// Portal pages that don't require a Supabase session
 const PORTAL_PUBLIC_PATHS = [
-  '/portal/login',
-  '/portal/signup',
-  '/portal/reset-password',
-  '/portal/update-password',
+  '/',
+  '/signup',
+  '/reset-password',
+  '/update-password',
 ]
+
+// Portal pages that DO require auth (any path not in PORTAL_PUBLIC_PATHS and not /admin or /login)
+function isPortalProtected(pathname: string): boolean {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/login') || pathname.startsWith('/api')) return false
+  return !PORTAL_PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   let response = NextResponse.next({ request })
 
   // ── Staff dashboard guard ────────────────────────────────────────────────
-  // Protected by a shared password cookie (simple internal tool auth)
-  // Both /dashboard/* and /admin/* are staff-only (next.config redirects /admin → /dashboard)
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/admin')) {
     const sessionCookie = request.cookies.get(STAFF_COOKIE)
     if (sessionCookie?.value !== SESSION_TOKEN) {
       const loginUrl = new URL('/login', request.url)
@@ -31,25 +35,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── Partner portal guard ─────────────────────────────────────────────────
-  // Protected by Supabase Auth session cookies (email + password login)
-  if (pathname.startsWith('/portal')) {
-    // Allow public portal pages (login, signup) through
-    if (PORTAL_PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-      return response
-    }
-
-    // Create a Supabase client that can read + refresh the session cookie
+  if (isPortalProtected(pathname)) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
+          getAll() { return request.cookies.getAll() },
           setAll(cookiesToSet) {
-            // Write cookies to both the request (for this middleware) and
-            // the response (so the browser receives the refreshed token)
             cookiesToSet.forEach(({ name, value, options }) => {
               request.cookies.set(name, value)
               response.cookies.set(name, value, options)
@@ -59,12 +52,9 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    // getUser() validates the JWT and refreshes the session if needed.
-    // Never use getSession() in middleware — it doesn't revalidate the JWT.
     const { data: { user } } = await supabase.auth.getUser()
-
     if (!user) {
-      return NextResponse.redirect(new URL('/portal/login', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
 
@@ -72,5 +62,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/portal/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/products/:path*',
+    '/cart/:path*',
+    '/orders/:path*',
+  ],
 }

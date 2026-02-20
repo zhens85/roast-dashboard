@@ -64,7 +64,7 @@ export default async function PortalOrdersPage() {
                style={{ borderColor: '#e5e5e5' }}>
             <p className="mb-4" style={{ color: '#777777' }}>No orders yet.</p>
             <a
-              href="/portal/products"
+              href="/products"
               className="inline-block text-white font-semibold px-5 py-2 rounded-lg
                          transition-opacity hover:opacity-90"
               style={{ backgroundColor: '#466c7e' }}

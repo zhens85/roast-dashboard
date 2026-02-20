@@ -10,7 +10,7 @@ export default function PortalNav({ companyName }: PortalNavProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
 
         {/* Logo */}
-        <a href="/portal/products" className="flex-shrink-0">
+        <a href="/products" className="flex-shrink-0">
           <img
             src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
             alt="Good Folks Coffee"
@@ -21,14 +21,14 @@ export default function PortalNav({ companyName }: PortalNavProps) {
         {/* Nav links */}
         <nav className="flex items-center gap-1 sm:gap-2">
           <a
-            href="/portal/products"
+            href="/products"
             className="text-sm font-medium px-3 py-1.5 rounded transition-colors hover:bg-gray-50"
             style={{ color: '#466c7e' }}
           >
             Products
           </a>
           <a
-            href="/portal/orders"
+            href="/orders"
             className="text-sm font-medium px-3 py-1.5 rounded transition-colors hover:bg-gray-50"
             style={{ color: '#466c7e' }}
           >

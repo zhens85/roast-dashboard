@@ -9,13 +9,13 @@ export async function POST(request: NextRequest) {
   const contactPerson = (formData.get('contact_person') as string)?.trim()
 
   if (!email || !password || !companyName || !contactPerson) {
-    const url = new URL('/portal/signup', request.url)
+    const url = new URL('/signup', request.url)
     url.searchParams.set('error', 'missing')
     return NextResponse.redirect(url, { status: 303 })
   }
 
   if (password.length < 8) {
-    const url = new URL('/portal/signup', request.url)
+    const url = new URL('/signup', request.url)
     url.searchParams.set('error', 'password_short')
     return NextResponse.redirect(url, { status: 303 })
   }
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (authError || !authData.user) {
-    const url = new URL('/portal/signup', request.url)
+    const url = new URL('/signup', request.url)
     // Common case: email already registered
     url.searchParams.set('error', authError?.message?.includes('already') ? 'email_taken' : 'auth_error')
     return NextResponse.redirect(url, { status: 303 })
@@ -51,11 +51,11 @@ export async function POST(request: NextRequest) {
     console.error('Error inserting partner profile:', partnerError)
     // Auth user was created but partner row failed — redirect with error
     // User can try signing in and we can investigate the DB issue
-    const url = new URL('/portal/signup', request.url)
+    const url = new URL('/signup', request.url)
     url.searchParams.set('error', 'profile_error')
     return NextResponse.redirect(url, { status: 303 })
   }
 
   // Session cookie is already set — redirect to products
-  return NextResponse.redirect(new URL('/portal/products', request.url), { status: 303 })
+  return NextResponse.redirect(new URL('/products', request.url), { status: 303 })
 }
