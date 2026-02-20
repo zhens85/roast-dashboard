@@ -6,7 +6,12 @@ const STAFF_COOKIE  = 'roast_session'
 const SESSION_TOKEN = 'authenticated'
 
 // Routes accessible without portal login
-const PORTAL_PUBLIC_PATHS = ['/portal/login', '/portal/signup']
+const PORTAL_PUBLIC_PATHS = [
+  '/portal/login',
+  '/portal/signup',
+  '/portal/reset-password',
+  '/portal/update-password',
+]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

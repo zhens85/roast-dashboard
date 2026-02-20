@@ -9,14 +9,17 @@ interface Props {
 }
 
 export default function DashboardClient({ initialOrders }: Props) {
+  const [orders, setOrders]               = useState<DashboardOrder[]>(initialOrders)
   const [selectedIds, setSelectedIds]     = useState<Set<number>>(new Set())
   const [lossOverrides, setLossOverrides] = useState<Record<number, number>>({})
   const [isPending, startTransition]      = useTransition()
   const [confirmStatus, setConfirmStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [cancellingId, setCancellingId]   = useState<number | null>(null)
+  const [cancelError, setCancelError]     = useState<string | null>(null)
 
   const selectedOrders = useMemo(
-    () => initialOrders.filter((o) => selectedIds.has(o.id)),
-    [initialOrders, selectedIds]
+    () => orders.filter((o) => selectedIds.has(o.id)),
+    [orders, selectedIds]
   )
 
   const roastSchedule: RoastLine[] = useMemo(
@@ -39,9 +42,9 @@ export default function DashboardClient({ initialOrders }: Props) {
 
   function toggleAll() {
     setSelectedIds(
-      selectedIds.size === initialOrders.length
+      selectedIds.size === orders.length
         ? new Set()
-        : new Set(initialOrders.map((o) => o.id))
+        : new Set(orders.map((o) => o.id))
     )
   }
 
@@ -70,6 +73,34 @@ export default function DashboardClient({ initialOrders }: Props) {
     })
   }
 
+  async function handleCancelOrder(e: React.MouseEvent, orderId: number) {
+    e.stopPropagation()   // don't toggle the checkbox
+    if (!window.confirm('Cancel this order? The partner will need to resubmit if needed.')) return
+
+    setCancellingId(orderId)
+    setCancelError(null)
+    try {
+      const res = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: [orderId] }),
+      })
+      if (!res.ok) throw new Error('API error')
+
+      // Remove from local state immediately
+      setOrders((prev) => prev.filter((o) => o.id !== orderId))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    } catch {
+      setCancelError(`Could not cancel order #${orderId}. Please try again.`)
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
   const printUrl = `/dashboard/print?orders=${Array.from(selectedIds).join(',')}`
 
   return (
@@ -79,23 +110,27 @@ export default function DashboardClient({ initialOrders }: Props) {
       <section>
         <div className="flex items-center gap-4 mb-3">
           <h2 className="text-xl font-semibold text-stone-800">Order Queue</h2>
-          {initialOrders.length > 0 && (
+          {orders.length > 0 && (
             <button
               onClick={toggleAll}
               className="text-xs text-amber-700 underline hover:text-amber-900"
             >
-              {selectedIds.size === initialOrders.length ? 'Deselect all' : 'Select all'}
+              {selectedIds.size === orders.length ? 'Deselect all' : 'Select all'}
             </button>
           )}
         </div>
 
-        {initialOrders.length === 0 ? (
+        {cancelError && (
+          <p className="mb-2 text-sm text-red-600">{cancelError}</p>
+        )}
+
+        {orders.length === 0 ? (
           <div className="bg-white rounded-lg border border-stone-200 p-8 text-center text-stone-500">
             No pending orders. All caught up!
           </div>
         ) : (
           <div className="space-y-2">
-            {initialOrders.map((order) => (
+            {orders.map((order) => (
               <div
                 key={order.id}
                 onClick={() => toggleOrder(order.id)}
@@ -139,8 +174,19 @@ export default function DashboardClient({ initialOrders }: Props) {
                     </div>
                   )}
                 </div>
-                <div className="text-sm font-medium text-stone-700 whitespace-nowrap flex-shrink-0">
-                  ${(order.total_amount_cents / 100).toFixed(2)}
+
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-sm font-medium text-stone-700 whitespace-nowrap">
+                    ${(order.total_amount_cents / 100).toFixed(2)}
+                  </div>
+                  <button
+                    onClick={(e) => handleCancelOrder(e, order.id)}
+                    disabled={cancellingId === order.id}
+                    className="text-xs text-red-500 hover:text-red-700 underline disabled:opacity-50
+                               whitespace-nowrap"
+                  >
+                    {cancellingId === order.id ? 'Cancelling…' : 'Cancel'}
+                  </button>
                 </div>
               </div>
             ))}

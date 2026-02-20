@@ -90,6 +90,12 @@ export default async function PortalLoginPage({
             Create an account
           </a>
         </p>
+
+        <p className="mt-2 text-center text-sm text-stone-400">
+          <a href="/portal/reset-password" className="hover:text-stone-600 underline">
+            Forgot your password?
+          </a>
+        </p>
       </div>
     </div>
   )
