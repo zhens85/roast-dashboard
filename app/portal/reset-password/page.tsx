@@ -11,15 +11,21 @@ export default async function ResetPasswordPage({
   const error  = params.error === 'invalid'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-100 px-4">
-      <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-sm">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">☕</span>
-            <h1 className="text-2xl font-bold text-stone-800">Reset Password</h1>
-          </div>
-          <p className="text-stone-500 text-sm">
+    <div className="min-h-screen flex items-center justify-center px-4"
+         style={{ backgroundColor: '#f7f5f2' }}>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
+
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <img
+            src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
+            alt="Good Folks Coffee"
+            className="h-12 w-auto object-contain mb-5"
+          />
+          <h1 className="text-lg font-semibold" style={{ color: '#3b4858' }}>
+            Reset Password
+          </h1>
+          <p className="text-sm mt-1 text-center" style={{ color: '#777777' }}>
             Enter your account email and we&apos;ll send you a reset link.
           </p>
         </div>
@@ -27,13 +33,15 @@ export default async function ResetPasswordPage({
         {sent ? (
           /* ── Success state ── */
           <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+            <div className="rounded-lg p-4 text-sm"
+                 style={{ backgroundColor: '#eaf4ef', color: '#2d7a4f' }}>
               Check your inbox — if that email is registered, a reset link is on its way.
               It may take a minute or two to arrive.
             </div>
             <a
               href="/portal/login"
-              className="block text-center text-sm text-amber-700 hover:text-amber-900 underline"
+              className="block text-center text-sm underline hover:opacity-70 transition-opacity"
+              style={{ color: '#466c7e' }}
             >
               ← Back to sign in
             </a>
@@ -42,7 +50,8 @@ export default async function ResetPasswordPage({
           /* ── Request form ── */
           <form method="POST" action="/api/portal/auth/reset-password" className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium mb-1"
+                     style={{ color: '#3b4858' }}>
                 Email
               </label>
               <input
@@ -52,28 +61,30 @@ export default async function ResetPasswordPage({
                 required
                 autoFocus
                 autoComplete="email"
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-stone-800
-                           focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+                style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
               />
             </div>
 
             {error && (
-              <p className="text-red-600 text-sm">
+              <p className="text-sm" style={{ color: '#d60000' }}>
                 Something went wrong. Please try again.
               </p>
             )}
 
             <button
               type="submit"
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold
-                         py-2 rounded-lg transition-colors"
+              className="w-full text-white font-semibold py-2.5 rounded-lg transition-opacity
+                         hover:opacity-90 text-sm"
+              style={{ backgroundColor: '#466c7e' }}
             >
               Send reset link
             </button>
 
             <a
               href="/portal/login"
-              className="block text-center text-sm text-stone-500 hover:text-stone-700 underline"
+              className="block text-center text-sm underline hover:opacity-70 transition-opacity"
+              style={{ color: '#999' }}
             >
               ← Back to sign in
             </a>

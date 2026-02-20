@@ -1,47 +1,47 @@
-// Staff dashboard layout — adds a nav bar with Orders | Tiers links.
-// Wraps all /dashboard/* pages.
+// Staff dashboard layout — sticky nav bar wrapping all /dashboard/* pages.
+import type { ReactNode } from 'react'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen" style={{ backgroundColor: '#f7f5f2' }}>
       {/* Staff nav bar */}
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
-          <nav className="flex items-center gap-1">
-            <a
-              href="/dashboard"
-              className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
-                         rounded hover:bg-stone-100 transition-colors"
-            >
-              Orders
-            </a>
-            <a
-              href="/dashboard/products"
-              className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
-                         rounded hover:bg-stone-100 transition-colors"
-            >
-              Products
-            </a>
-            <a
-              href="/dashboard/partners"
-              className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
-                         rounded hover:bg-stone-100 transition-colors"
-            >
-              Partners
-            </a>
-            <a
-              href="/dashboard/tiers"
-              className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
-                         rounded hover:bg-stone-100 transition-colors"
-            >
-              Tiers
-            </a>
+      <header className="bg-white border-b sticky top-0 z-20" style={{ borderColor: '#e5e5e5' }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-13 flex items-center justify-between gap-6">
+
+          {/* Logo */}
+          <a href="/dashboard" className="flex-shrink-0 py-2">
+            <img
+              src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
+              alt="Good Folks Coffee"
+              className="h-6 w-auto object-contain"
+            />
+          </a>
+
+          {/* Nav links */}
+          <nav className="flex items-center gap-0.5 flex-1">
+            {[
+              { href: '/dashboard',          label: 'Orders'   },
+              { href: '/dashboard/products', label: 'Products' },
+              { href: '/dashboard/partners', label: 'Partners' },
+              { href: '/dashboard/tiers',    label: 'Tiers'    },
+            ].map(({ href, label }) => (
+              <a
+                key={href}
+                href={href}
+                className="text-sm font-medium px-3 py-2 rounded transition-colors hover:bg-gray-50"
+                style={{ color: '#3b4858' }}
+              >
+                {label}
+              </a>
+            ))}
           </nav>
 
+          {/* Sign out */}
           <form action="/api/auth/logout" method="POST">
             <button
               type="submit"
-              className="text-xs text-stone-400 hover:text-stone-700 underline"
+              className="text-xs underline hover:opacity-70 transition-opacity"
+              style={{ color: '#999' }}
             >
               Sign out
             </button>

@@ -38,7 +38,7 @@ export default function CartView() {
   }, [])
 
   if (!mounted) {
-    return <div className="text-stone-400 text-sm">Loading cart…</div>
+    return <div className="text-sm" style={{ color: '#999' }}>Loading cart…</div>
   }
 
   function updateQty(variantId: number, newQty: number) {
@@ -64,16 +64,13 @@ export default function CartView() {
   async function handlePlaceOrder() {
     if (cart.length === 0 || status === 'submitting') return
     setStatus('submitting')
-
     try {
       const res = await fetch('/api/portal/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: cart, notes }),
       })
-
       if (!res.ok) throw new Error('API error')
-
       clearCart()
       setCart([])
       setNotes('')
@@ -83,15 +80,17 @@ export default function CartView() {
     }
   }
 
-  // ── Empty state ────────────────────────────────────────────────────────────
+  // ── Empty state ─────────────────────────────────────────────────────────────
   if (cart.length === 0 && status !== 'success') {
     return (
-      <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
-        <p className="text-stone-500 mb-4">Your cart is empty.</p>
+      <div className="bg-white rounded-xl border p-12 text-center"
+           style={{ borderColor: '#e5e5e5' }}>
+        <p className="mb-4" style={{ color: '#777777' }}>Your cart is empty.</p>
         <a
           href="/portal/products"
-          className="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold
-                     px-5 py-2 rounded-lg transition-colors"
+          className="inline-block text-white font-semibold px-5 py-2 rounded-lg
+                     transition-opacity hover:opacity-90"
+          style={{ backgroundColor: '#466c7e' }}
         >
           Browse Coffees
         </a>
@@ -99,27 +98,29 @@ export default function CartView() {
     )
   }
 
-  // ── Success state ──────────────────────────────────────────────────────────
+  // ── Success state ───────────────────────────────────────────────────────────
   if (status === 'success') {
     return (
-      <div className="bg-white rounded-xl border border-stone-200 p-12 text-center">
+      <div className="bg-white rounded-xl border p-12 text-center"
+           style={{ borderColor: '#e5e5e5' }}>
         <div className="text-4xl mb-3">✅</div>
-        <h2 className="text-xl font-bold text-stone-800 mb-2">Order Placed!</h2>
-        <p className="text-stone-500 mb-6">
+        <h2 className="text-xl font-bold mb-2" style={{ color: '#3b4858' }}>Order Placed!</h2>
+        <p className="mb-6" style={{ color: '#777777' }}>
           We&apos;ve received your order and will be in touch once it&apos;s confirmed.
         </p>
         <div className="flex gap-3 justify-center">
           <a
             href="/portal/products"
-            className="bg-amber-600 hover:bg-amber-700 text-white font-semibold
-                       px-5 py-2 rounded-lg transition-colors"
+            className="text-white font-semibold px-5 py-2 rounded-lg
+                       transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#466c7e' }}
           >
             Place Another Order
           </a>
           <a
             href="/portal/orders"
-            className="border border-stone-300 text-stone-700 hover:border-stone-400
-                       font-semibold px-5 py-2 rounded-lg transition-colors"
+            className="border font-semibold px-5 py-2 rounded-lg transition-colors hover:bg-gray-50"
+            style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
           >
             View Order History
           </a>
@@ -128,46 +129,53 @@ export default function CartView() {
     )
   }
 
-  // ── Cart items ─────────────────────────────────────────────────────────────
+  // ── Cart items ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       {/* Line items */}
-      <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+      <div className="bg-white rounded-xl border divide-y" style={{ borderColor: '#e5e5e5' }}>
         {cart.map((item) => (
           <div key={item.variantId} className="flex items-center gap-4 px-5 py-4">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-stone-900 truncate">{item.productName}</p>
-              <p className="text-sm text-stone-500">{item.size} — {fmtPrice(item.unitPriceCents)} each</p>
+              <p className="font-medium truncate" style={{ color: '#3b4858' }}>{item.productName}</p>
+              <p className="text-sm" style={{ color: '#777777' }}>
+                {item.size} — {fmtPrice(item.unitPriceCents)} each
+              </p>
             </div>
 
             {/* Quantity controls */}
-            <div className="flex items-center border border-stone-300 rounded-lg overflow-hidden">
+            <div className="flex items-center border rounded-lg overflow-hidden"
+                 style={{ borderColor: '#d0d0d0' }}>
               <button
                 onClick={() => updateQty(item.variantId, item.quantity - 1)}
-                className="px-2.5 py-1.5 text-stone-600 hover:bg-stone-50 transition-colors"
+                className="px-2.5 py-1.5 transition-colors hover:bg-gray-50"
+                style={{ color: '#466c7e' }}
               >
                 −
               </button>
-              <span className="px-3 py-1.5 text-stone-800 font-medium min-w-[2rem] text-center text-sm">
+              <span className="px-3 py-1.5 font-medium min-w-[2rem] text-center text-sm"
+                    style={{ color: '#3b4858' }}>
                 {item.quantity}
               </span>
               <button
                 onClick={() => updateQty(item.variantId, item.quantity + 1)}
-                className="px-2.5 py-1.5 text-stone-600 hover:bg-stone-50 transition-colors"
+                className="px-2.5 py-1.5 transition-colors hover:bg-gray-50"
+                style={{ color: '#466c7e' }}
               >
                 +
               </button>
             </div>
 
             {/* Line total */}
-            <span className="text-stone-800 font-medium w-20 text-right">
+            <span className="font-medium w-20 text-right" style={{ color: '#3b4858' }}>
               {fmtPrice(item.unitPriceCents * item.quantity)}
             </span>
 
             {/* Remove */}
             <button
               onClick={() => removeItem(item.variantId)}
-              className="text-stone-300 hover:text-red-500 transition-colors ml-1"
+              className="transition-colors hover:opacity-70 ml-1"
+              style={{ color: '#ccc' }}
               title="Remove"
             >
               ✕
@@ -177,16 +185,18 @@ export default function CartView() {
       </div>
 
       {/* Order total */}
-      <div className="flex justify-between items-center px-5 py-4 bg-white rounded-xl
-                      border border-stone-200 font-semibold text-stone-800">
+      <div className="flex justify-between items-center px-5 py-4 bg-white rounded-xl border font-semibold"
+           style={{ borderColor: '#e5e5e5', color: '#3b4858' }}>
         <span>Order Total</span>
         <span className="text-xl">{fmtPrice(total)}</span>
       </div>
 
       {/* Notes */}
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-stone-700 mb-1">
-          Order Notes <span className="text-stone-400 font-normal">(optional)</span>
+        <label htmlFor="notes" className="block text-sm font-medium mb-1"
+               style={{ color: '#3b4858' }}>
+          Order Notes{' '}
+          <span className="font-normal" style={{ color: '#999' }}>(optional)</span>
         </label>
         <textarea
           id="notes"
@@ -194,30 +204,34 @@ export default function CartView() {
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Any special instructions or delivery notes…"
           rows={3}
-          className="w-full border border-stone-300 rounded-lg px-3 py-2 text-stone-800 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 resize-none"
+          style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
         />
       </div>
 
       {/* Error */}
       {status === 'error' && (
-        <p className="text-red-600 text-sm">Something went wrong placing your order. Please try again.</p>
+        <p className="text-sm" style={{ color: '#d60000' }}>
+          Something went wrong placing your order. Please try again.
+        </p>
       )}
 
       {/* Actions */}
       <div className="flex gap-3">
         <a
           href="/portal/products"
-          className="flex-shrink-0 border border-stone-300 text-stone-600 hover:border-stone-400
-                     font-medium px-4 py-3 rounded-lg transition-colors text-sm"
+          className="flex-shrink-0 border font-medium px-4 py-3 rounded-lg transition-colors
+                     hover:bg-gray-50 text-sm"
+          style={{ borderColor: '#d0d0d0', color: '#466c7e' }}
         >
           ← Continue Shopping
         </a>
         <button
           onClick={handlePlaceOrder}
           disabled={status === 'submitting'}
-          className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white
-                     font-semibold py-3 rounded-lg transition-colors"
+          className="flex-1 text-white font-semibold py-3 rounded-lg transition-opacity
+                     hover:opacity-90 disabled:opacity-50"
+          style={{ backgroundColor: '#466c7e' }}
         >
           {status === 'submitting' ? 'Placing Order…' : 'Place Order'}
         </button>

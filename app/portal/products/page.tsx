@@ -51,21 +51,22 @@ export default async function PortalProductsPage() {
   const { products, partner, discountPct } = await fetchProductsAndPartner()
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#f7f5f2' }}>
       <PortalNav companyName={partner.company_name} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-stone-900">Our Coffees</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#3b4858' }}>Our Coffees</h1>
           {discountPct > 0 && (
-            <p className="text-sm text-emerald-700 mt-1 font-medium">
+            <p className="text-sm mt-1 font-medium" style={{ color: '#2d7a4f' }}>
               Your partner discount of {discountPct}% is applied automatically.
             </p>
           )}
         </div>
 
         {products.length === 0 ? (
-          <div className="bg-white rounded-lg border border-stone-200 p-12 text-center text-stone-500">
+          <div className="bg-white rounded-xl border p-12 text-center"
+               style={{ borderColor: '#e5e5e5', color: '#777777' }}>
             No coffees available at this time.
           </div>
         ) : (

@@ -17,10 +17,10 @@ export default async function CartPage() {
     .single()
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#f7f5f2' }}>
       <PortalNav companyName={(partner as Partner)?.company_name ?? ''} />
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="text-2xl font-bold text-stone-900 mb-6">Your Cart</h1>
+        <h1 className="text-2xl font-bold mb-6" style={{ color: '#3b4858' }}>Your Cart</h1>
         <CartView />
       </main>
     </div>
