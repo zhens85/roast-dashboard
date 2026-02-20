@@ -18,11 +18,22 @@ export default async function LoginPage({
   const hasError   = params.error === 'invalid'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-100">
-      <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-sm">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-stone-800">Roast Dashboard</h1>
-          <p className="text-stone-500 text-sm mt-1">Operations access only</p>
+    <div className="min-h-screen flex items-center justify-center px-4"
+         style={{ backgroundColor: '#f7f5f2' }}>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
+
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img
+            src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
+            alt="Good Folks Coffee"
+            className="h-10 w-auto object-contain"
+          />
+        </div>
+
+        <div className="mb-5 text-center">
+          <h1 className="text-lg font-semibold" style={{ color: '#3b4858' }}>Operations</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#999' }}>Staff access only</p>
         </div>
 
         <form method="POST" action="/api/auth/login" className="space-y-4">
@@ -31,7 +42,8 @@ export default async function LoginPage({
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-stone-700 mb-1"
+              className="block text-xs font-medium mb-1"
+              style={{ color: '#777' }}
             >
               Password
             </label>
@@ -41,19 +53,21 @@ export default async function LoginPage({
               type="password"
               required
               autoFocus
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-stone-800
-                         focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full border rounded-lg px-3 py-2 text-sm
+                         focus:outline-none focus:ring-2"
+              style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
             />
           </div>
 
           {hasError && (
-            <p className="text-red-600 text-sm">Incorrect password. Try again.</p>
+            <p className="text-sm" style={{ color: '#d60000' }}>Incorrect password. Try again.</p>
           )}
 
           <button
             type="submit"
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold
-                       py-2 rounded-lg transition-colors"
+            className="w-full text-white font-semibold py-2 rounded-lg
+                       hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#466c7e' }}
           >
             Sign in
           </button>

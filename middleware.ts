@@ -19,7 +19,8 @@ export async function middleware(request: NextRequest) {
 
   // ── Staff dashboard guard ────────────────────────────────────────────────
   // Protected by a shared password cookie (simple internal tool auth)
-  if (pathname.startsWith('/dashboard')) {
+  // Both /dashboard/* and /admin/* are staff-only (next.config redirects /admin → /dashboard)
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
     const sessionCookie = request.cookies.get(STAFF_COOKIE)
     if (sessionCookie?.value !== SESSION_TOKEN) {
       const loginUrl = new URL('/login', request.url)
@@ -71,5 +72,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/portal/:path*'],
+  matcher: ['/dashboard/:path*', '/admin/:path*', '/portal/:path*'],
 }
