@@ -14,10 +14,15 @@ export default async function PortalLoginPage({
 }) {
   const params = await searchParams
 
-  // If already logged in, skip to products
-  const supabase = await createPortalSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/portal/products')
+  // If already logged in, skip to products.
+  // Wrapped in try/catch so a missing env var doesn't crash the login page itself.
+  try {
+    const supabase = await createPortalSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) redirect('/portal/products')
+  } catch {
+    // Not logged in or env var missing — just render the login form
+  }
 
   const errorMsg = params.error ? (ERROR_MESSAGES[params.error] ?? ERROR_MESSAGES.default) : null
 
