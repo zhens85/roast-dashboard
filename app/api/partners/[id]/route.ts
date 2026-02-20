@@ -43,3 +43,29 @@ export async function PATCH(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+// DELETE /api/partners/[id] — permanently delete a partner account
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!isAuthenticated(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id: partnerId } = await params
+  const supabase = createServerSupabaseClient()
+
+  // Delete from partners table first (FK constraint), then from auth.users
+  const { error: dbError } = await supabase
+    .from('partners')
+    .delete()
+    .eq('id', partnerId)
+
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
+
+  const { error: authError } = await supabase.auth.admin.deleteUser(partnerId)
+  if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}
