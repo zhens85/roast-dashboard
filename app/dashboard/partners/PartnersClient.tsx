@@ -493,7 +493,7 @@ function CreatePartnerForm({
         <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <p className="text-xs text-amber-800">
             <strong>Note:</strong> Share the email and temporary password with the partner so they can log in at{' '}
-            <span className="font-mono">goodfolks.coffee/portal/login</span>.
+            <span className="font-mono">goodfolks.coffee</span>.
             They can change their password after logging in via their account settings.
           </p>
         </div>
