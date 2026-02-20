@@ -74,7 +74,7 @@ export default function DashboardClient({ initialOrders }: Props) {
   }
 
   async function handleCancelOrder(e: React.MouseEvent, orderId: number) {
-    e.stopPropagation()   // don't toggle the checkbox
+    e.stopPropagation()
     if (!window.confirm('Cancel this order? The partner will need to resubmit if needed.')) return
 
     setCancellingId(orderId)
@@ -87,7 +87,6 @@ export default function DashboardClient({ initialOrders }: Props) {
       })
       if (!res.ok) throw new Error('API error')
 
-      // Remove from local state immediately
       setOrders((prev) => prev.filter((o) => o.id !== orderId))
       setSelectedIds((prev) => {
         const next = new Set(prev)
@@ -109,11 +108,12 @@ export default function DashboardClient({ initialOrders }: Props) {
       {/* ── ORDER QUEUE ── */}
       <section>
         <div className="flex items-center gap-4 mb-3">
-          <h2 className="text-xl font-semibold text-stone-800">Order Queue</h2>
+          <h2 className="text-xl font-semibold" style={{ color: '#3b4858' }}>Order Queue</h2>
           {orders.length > 0 && (
             <button
               onClick={toggleAll}
-              className="text-xs text-amber-700 underline hover:text-amber-900"
+              className="text-xs underline hover:opacity-70 transition-opacity"
+              style={{ color: '#466c7e' }}
             >
               {selectedIds.size === orders.length ? 'Deselect all' : 'Select all'}
             </button>
@@ -121,11 +121,12 @@ export default function DashboardClient({ initialOrders }: Props) {
         </div>
 
         {cancelError && (
-          <p className="mb-2 text-sm text-red-600">{cancelError}</p>
+          <p className="mb-2 text-sm" style={{ color: '#d60000' }}>{cancelError}</p>
         )}
 
         {orders.length === 0 ? (
-          <div className="bg-white rounded-lg border border-stone-200 p-8 text-center text-stone-500">
+          <div className="bg-white rounded-xl border p-8 text-center"
+               style={{ borderColor: '#e5e5e5', color: '#777777' }}>
             No pending orders. All caught up!
           </div>
         ) : (
@@ -134,56 +135,58 @@ export default function DashboardClient({ initialOrders }: Props) {
               <div
                 key={order.id}
                 onClick={() => toggleOrder(order.id)}
-                className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors
-                  ${selectedIds.has(order.id)
-                    ? 'border-amber-400 bg-amber-50'
-                    : 'border-stone-200 bg-white hover:border-stone-300'
-                  }`}
+                className="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all"
+                style={selectedIds.has(order.id)
+                  ? { borderColor: '#466c7e', backgroundColor: '#f0f4f5' }
+                  : { borderColor: '#e5e5e5', backgroundColor: 'white' }
+                }
               >
                 <input
                   type="checkbox"
                   checked={selectedIds.has(order.id)}
                   readOnly
-                  className="mt-0.5 h-4 w-4 accent-amber-600 cursor-pointer flex-shrink-0"
+                  className="mt-0.5 h-4 w-4 cursor-pointer flex-shrink-0"
+                  style={{ accentColor: '#466c7e' }}
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="font-medium text-stone-900">
+                    <span className="font-medium" style={{ color: '#3b4858' }}>
                       {order.partners.company_name}
                     </span>
-                    <span className="text-stone-400 text-sm">#{order.id}</span>
-                    <span className="text-stone-500 text-sm">
+                    <span className="text-sm" style={{ color: '#bbb' }}>#{order.id}</span>
+                    <span className="text-sm" style={{ color: '#777777' }}>
                       — {order.partners.contact_person}
                     </span>
                   </div>
-                  <div className="text-sm text-stone-500 mt-0.5">
+                  <div className="text-sm mt-0.5" style={{ color: '#999' }}>
                     {new Date(order.created_at).toLocaleDateString('en-US', {
                       month: 'short', day: 'numeric', year: 'numeric',
                     })}
                   </div>
                   <div className="flex flex-wrap gap-x-3 mt-1">
                     {order.order_items.map((item) => (
-                      <span key={item.id} className="text-sm text-stone-600">
+                      <span key={item.id} className="text-sm" style={{ color: '#555' }}>
                         {item.product_variants.products.name} {item.product_variants.size} ×{item.quantity}
                       </span>
                     ))}
                   </div>
                   {order.notes && (
-                    <div className="text-xs text-amber-700 mt-1 italic">
+                    <div className="text-xs mt-1 italic" style={{ color: '#466c7e' }}>
                       Note: {order.notes}
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className="text-sm font-medium text-stone-700 whitespace-nowrap">
+                  <div className="text-sm font-medium whitespace-nowrap" style={{ color: '#3b4858' }}>
                     ${(order.total_amount_cents / 100).toFixed(2)}
                   </div>
                   <button
                     onClick={(e) => handleCancelOrder(e, order.id)}
                     disabled={cancellingId === order.id}
-                    className="text-xs text-red-500 hover:text-red-700 underline disabled:opacity-50
-                               whitespace-nowrap"
+                    className="text-xs underline whitespace-nowrap disabled:opacity-50
+                               hover:opacity-70 transition-opacity"
+                    style={{ color: '#d60000' }}
                   >
                     {cancellingId === order.id ? 'Cancelling…' : 'Cancel'}
                   </button>
@@ -198,27 +201,35 @@ export default function DashboardClient({ initialOrders }: Props) {
         <>
           {/* ── ROAST SCHEDULE ── */}
           <section>
-            <h2 className="text-xl font-semibold text-stone-800 mb-3">
+            <h2 className="text-xl font-semibold mb-3" style={{ color: '#3b4858' }}>
               Roast Schedule
-              <span className="text-sm font-normal text-stone-500 ml-2">
+              <span className="text-sm font-normal ml-2" style={{ color: '#999' }}>
                 ({selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''} selected)
               </span>
             </h2>
-            <div className="bg-white rounded-lg border border-stone-200 overflow-hidden">
+            <div className="bg-white rounded-xl border overflow-hidden"
+                 style={{ borderColor: '#e5e5e5' }}>
               <table className="w-full text-sm">
-                <thead className="bg-stone-50 text-stone-500 text-xs uppercase tracking-wide">
+                <thead style={{ backgroundColor: '#fafafa' }}>
                   <tr>
-                    <th className="text-left px-4 py-3">Coffee</th>
-                    <th className="text-right px-4 py-3">Finished (lbs)</th>
-                    <th className="text-center px-4 py-3">Loss Factor</th>
-                    <th className="text-right px-4 py-3">Green (lbs)</th>
+                    {['Coffee', 'Finished (lbs)', 'Loss Factor', 'Green (lbs)'].map((h, i) => (
+                      <th key={h}
+                          className={`px-4 py-3 text-xs font-medium uppercase tracking-wide
+                                      ${i === 0 ? 'text-left' : i === 2 ? 'text-center' : 'text-right'}`}
+                          style={{ color: '#999' }}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {roastSchedule.map((line) => (
-                    <tr key={line.productId} className="hover:bg-stone-50">
-                      <td className="px-4 py-3 font-medium text-stone-900">{line.productName}</td>
-                      <td className="px-4 py-3 text-right text-stone-700">
+                <tbody>
+                  {roastSchedule.map((line, i) => (
+                    <tr key={line.productId}
+                        style={{ borderTop: i > 0 ? '1px solid #f0f0f0' : undefined }}>
+                      <td className="px-4 py-3 font-medium" style={{ color: '#3b4858' }}>
+                        {line.productName}
+                      </td>
+                      <td className="px-4 py-3 text-right" style={{ color: '#555' }}>
                         {fmtLbs(line.finishedWeightLbs)}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -230,24 +241,25 @@ export default function DashboardClient({ initialOrders }: Props) {
                           value={line.roastLossFactorOverride}
                           onChange={(e) => setLossOverride(line.productId, e.target.value)}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-20 border border-stone-300 rounded px-2 py-1 text-center
-                                     text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                          className="w-20 border rounded px-2 py-1 text-center text-sm
+                                     focus:outline-none focus:ring-2"
+                          style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
                         />
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-amber-800">
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: '#466c7e' }}>
                         {fmtLbs(line.greenWeightLbs)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-stone-50 border-t-2 border-stone-200">
+                <tfoot style={{ borderTop: '2px solid #e5e5e5', backgroundColor: '#fafafa' }}>
                   <tr>
-                    <td className="px-4 py-3 font-semibold text-stone-700">Total</td>
-                    <td className="px-4 py-3 text-right font-semibold text-stone-700">
+                    <td className="px-4 py-3 font-semibold" style={{ color: '#3b4858' }}>Total</td>
+                    <td className="px-4 py-3 text-right font-semibold" style={{ color: '#555' }}>
                       {fmtLbs(roastSchedule.reduce((s, l) => s + l.finishedWeightLbs, 0))}
                     </td>
                     <td />
-                    <td className="px-4 py-3 text-right font-bold text-amber-800">
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: '#466c7e' }}>
                       {fmtLbs(roastSchedule.reduce((s, l) => s + l.greenWeightLbs, 0))}
                     </td>
                   </tr>
@@ -258,30 +270,36 @@ export default function DashboardClient({ initialOrders }: Props) {
 
           {/* ── PACKAGING TOTALS ── */}
           <section>
-            <h2 className="text-xl font-semibold text-stone-800 mb-3">Packaging — Totals</h2>
-            <div className="bg-white rounded-lg border border-stone-200 overflow-hidden">
+            <h2 className="text-xl font-semibold mb-3" style={{ color: '#3b4858' }}>
+              Packaging — Totals
+            </h2>
+            <div className="bg-white rounded-xl border overflow-hidden"
+                 style={{ borderColor: '#e5e5e5' }}>
               <table className="w-full text-sm">
-                <thead className="bg-stone-50 text-stone-500 text-xs uppercase tracking-wide">
+                <thead style={{ backgroundColor: '#fafafa' }}>
                   <tr>
-                    <th className="text-left px-4 py-3">Coffee</th>
-                    <th className="text-center px-4 py-3">12oz</th>
-                    <th className="text-center px-4 py-3">2lb</th>
-                    <th className="text-center px-4 py-3">5lb</th>
+                    {['Coffee', '12oz', '2lb', '5lb'].map((h, i) => (
+                      <th key={h}
+                          className={`px-4 py-3 text-xs font-medium uppercase tracking-wide
+                                      ${i === 0 ? 'text-left' : 'text-center'}`}
+                          style={{ color: '#999' }}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {roastSchedule.map((line) => (
-                    <tr key={line.productId}>
-                      <td className="px-4 py-3 font-medium text-stone-900">{line.productName}</td>
-                      <td className="px-4 py-3 text-center text-stone-700">
-                        {line.bagCounts['12oz'] > 0 ? `${line.bagCounts['12oz']}×` : '—'}
+                <tbody>
+                  {roastSchedule.map((line, i) => (
+                    <tr key={line.productId}
+                        style={{ borderTop: i > 0 ? '1px solid #f0f0f0' : undefined }}>
+                      <td className="px-4 py-3 font-medium" style={{ color: '#3b4858' }}>
+                        {line.productName}
                       </td>
-                      <td className="px-4 py-3 text-center text-stone-700">
-                        {line.bagCounts['2lb'] > 0 ? `${line.bagCounts['2lb']}×` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center text-stone-700">
-                        {line.bagCounts['5lb'] > 0 ? `${line.bagCounts['5lb']}×` : '—'}
-                      </td>
+                      {(['12oz', '2lb', '5lb'] as const).map((size) => (
+                        <td key={size} className="px-4 py-3 text-center" style={{ color: '#555' }}>
+                          {line.bagCounts[size] > 0 ? `${line.bagCounts[size]}×` : '—'}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -291,26 +309,34 @@ export default function DashboardClient({ initialOrders }: Props) {
 
           {/* ── PACKAGING PER ORDER ── */}
           <section>
-            <h2 className="text-xl font-semibold text-stone-800 mb-3">Packaging — Per Order</h2>
+            <h2 className="text-xl font-semibold mb-3" style={{ color: '#3b4858' }}>
+              Packaging — Per Order
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {packagingList.map((packOrder) => (
                 <div
                   key={packOrder.orderId}
-                  className="bg-white rounded-lg border border-stone-200 p-4"
+                  className="bg-white rounded-xl border p-4"
+                  style={{ borderColor: '#e5e5e5' }}
                 >
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-stone-900">{packOrder.companyName}</span>
-                    <span className="text-stone-400 text-xs">#{packOrder.orderId}</span>
-                    <span className="text-stone-500 text-sm">— {packOrder.partnerName}</span>
+                    <span className="font-semibold" style={{ color: '#3b4858' }}>
+                      {packOrder.companyName}
+                    </span>
+                    <span className="text-xs" style={{ color: '#bbb' }}>#{packOrder.orderId}</span>
+                    <span className="text-sm" style={{ color: '#777' }}>— {packOrder.partnerName}</span>
                   </div>
                   {packOrder.notes && (
-                    <p className="text-xs text-amber-700 italic mb-2">Note: {packOrder.notes}</p>
+                    <p className="text-xs italic mb-2" style={{ color: '#466c7e' }}>
+                      Note: {packOrder.notes}
+                    </p>
                   )}
                   <ul className="space-y-0.5 mt-2">
                     {packOrder.items.map((item, i) => (
-                      <li key={i} className="text-sm text-stone-700">
+                      <li key={i} className="text-sm" style={{ color: '#555' }}>
                         <span className="font-medium">{item.quantity}×</span>{' '}
-                        {item.productName} <span className="text-stone-500">{item.size}</span>
+                        {item.productName}{' '}
+                        <span style={{ color: '#999' }}>{item.size}</span>
                       </li>
                     ))}
                   </ul>
@@ -324,8 +350,9 @@ export default function DashboardClient({ initialOrders }: Props) {
             <button
               onClick={handleConfirmRun}
               disabled={isPending || confirmStatus === 'success'}
-              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white
-                         font-semibold px-6 py-3 rounded-lg transition-colors"
+              className="text-white font-semibold px-6 py-3 rounded-lg transition-opacity
+                         hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: '#466c7e' }}
             >
               {isPending
                 ? 'Confirming…'
@@ -338,13 +365,16 @@ export default function DashboardClient({ initialOrders }: Props) {
               href={printUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-stone-600 underline hover:text-stone-900"
+              className="text-sm underline hover:opacity-70 transition-opacity"
+              style={{ color: '#466c7e' }}
             >
               Open print view →
             </a>
 
             {confirmStatus === 'error' && (
-              <span className="text-red-600 text-sm">Something went wrong. Try again.</span>
+              <span className="text-sm" style={{ color: '#d60000' }}>
+                Something went wrong. Try again.
+              </span>
             )}
           </section>
         </>

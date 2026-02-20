@@ -37,8 +37,8 @@ export default async function DashboardPage() {
   return (
     <main className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-stone-900">Roast Dashboard</h1>
-        <p className="text-stone-500 text-sm mt-1">
+        <h1 className="text-3xl font-bold" style={{ color: '#3b4858' }}>Roast Dashboard</h1>
+        <p className="text-sm mt-1" style={{ color: '#777777' }}>
           {orders.length} pending order{orders.length !== 1 ? 's' : ''}
         </p>
       </div>
