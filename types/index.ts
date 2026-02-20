@@ -2,6 +2,15 @@
 // Database types — mirror the Supabase schema exactly (snake_case)
 // ============================================================
 
+export interface PartnerTier {
+  id: number
+  name: string
+  // IMPORTANT: Postgres NUMERIC arrives as a string in JSON.
+  // Always cast with Number(tier.discount_pct) before arithmetic.
+  discount_pct: number
+  created_at: string
+}
+
 export interface Partner {
   id: string
   email: string
@@ -12,6 +21,8 @@ export interface Partner {
   city: string | null
   state: string | null
   zip_code: string | null
+  tier_id: number | null
+  partner_tiers: PartnerTier | null  // embedded via join: partners(*,partner_tiers(*))
   created_at: string
 }
 
@@ -25,6 +36,7 @@ export interface Product {
   is_active: boolean
   image_url: string | null
   roast_loss_factor: number   // NUMERIC default 0.15
+  visible_to_tiers: number[] | null  // NULL/empty = visible to all tiers
   created_at: string
 }
 
@@ -57,6 +69,27 @@ export interface OrderItem {
 }
 
 // ============================================================
+// Portal-specific types (partner ordering web app)
+// ============================================================
+
+// Product with its variants embedded — used on the portal products page
+export interface PortalProduct extends Product {
+  product_variants: ProductVariant[]
+}
+
+// Cart item stored in localStorage (key: 'coffee_cart')
+// unitPriceCents is already discounted — matches what will be written to order_items
+export interface CartItem {
+  variantId: number
+  productId: number
+  productName: string
+  size: '12oz' | '2lb' | '5lb'
+  quantity: number
+  unitPriceCents: number   // already has discount applied
+  sku: string
+}
+
+// ============================================================
 // Denormalized shape returned by the joined dashboard query
 // ============================================================
 
@@ -69,6 +102,20 @@ export interface DashboardOrderItem extends OrderItem {
 export interface DashboardOrder extends Order {
   partners: Partner
   order_items: DashboardOrderItem[]
+}
+
+// ============================================================
+// Portal order history types
+// ============================================================
+
+export interface PortalOrderItem extends OrderItem {
+  product_variants: ProductVariant & {
+    products: Pick<Product, 'id' | 'name'>
+  }
+}
+
+export interface PortalOrder extends Order {
+  order_items: PortalOrderItem[]
 }
 
 // ============================================================

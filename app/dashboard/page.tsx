@@ -35,22 +35,12 @@ export default async function DashboardPage() {
   const orders = await fetchPendingOrders()
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-stone-900">Roast Dashboard</h1>
-          <p className="text-stone-500 text-sm mt-1">
-            {orders.length} pending order{orders.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <form action="/api/auth/logout" method="POST">
-          <button
-            type="submit"
-            className="text-sm text-stone-500 hover:text-stone-700 underline"
-          >
-            Sign out
-          </button>
-        </form>
+    <main className="p-6 max-w-6xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-stone-900">Roast Dashboard</h1>
+        <p className="text-stone-500 text-sm mt-1">
+          {orders.length} pending order{orders.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
       <DashboardClient initialOrders={orders} />
