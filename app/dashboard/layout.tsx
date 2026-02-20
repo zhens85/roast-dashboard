@@ -23,6 +23,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Products
             </a>
             <a
+              href="/dashboard/partners"
+              className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
+                         rounded hover:bg-stone-100 transition-colors"
+            >
+              Partners
+            </a>
+            <a
               href="/dashboard/tiers"
               className="text-sm font-semibold text-stone-700 hover:text-stone-900 px-3 py-1.5
                          rounded hover:bg-stone-100 transition-colors"
