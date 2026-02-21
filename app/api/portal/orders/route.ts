@@ -71,13 +71,11 @@ export async function POST(request: NextRequest) {
   // Send order notification email — awaited so Vercel doesn't terminate the
   // function before the email is dispatched. Errors are caught and logged so
   // a Resend failure never blocks the partner's order confirmation.
-  let emailError: string | null = null
   try {
     await sendOrderNotificationEmail(order.id)
   } catch (err) {
-    emailError = (err as Error).message
     console.error(`Order notification email failed for order ${order.id}:`, err)
   }
 
-  return NextResponse.json({ orderId: order.id, emailError }, { status: 201 })
+  return NextResponse.json({ orderId: order.id }, { status: 201 })
 }
