@@ -35,24 +35,12 @@ function isAuthorized(request: NextRequest): boolean {
   const qPass = searchParams.get('SS-Password') ?? searchParams.get('ss-password') ?? searchParams.get('password')
 
   if (qUser !== null && qPass !== null) {
-    const ok = qUser === expectedUser && qPass === expectedPass
-    if (!ok) {
-      console.error(
-        `[ShipStation] Query param auth mismatch. Got user="${qUser}" (expected "${expectedUser}"), ` +
-        `pass match=${qPass === expectedPass}`
-      )
-    }
-    return ok
+    return qUser === expectedUser && qPass === expectedPass
   }
 
   // Fallback: standard HTTP Basic auth header
   const authHeader = request.headers.get('authorization') ?? ''
-  if (!authHeader.startsWith('Basic ')) {
-    // Log all query param keys to see what ShipStation is actually sending
-    const allParams = Array.from(searchParams.entries()).map(([k]) => k).join(', ')
-    console.error(`[ShipStation] No auth found. Query params present: [${allParams || 'none'}]`)
-    return false
-  }
+  if (!authHeader.startsWith('Basic ')) return false
 
   const encoded = authHeader.slice('Basic '.length).trim()
   const decoded = Buffer.from(encoded, 'base64').toString('utf-8')
@@ -61,14 +49,7 @@ function isAuthorized(request: NextRequest): boolean {
 
   const user = decoded.slice(0, colonIndex)
   const pass = decoded.slice(colonIndex + 1)
-  const ok   = user === expectedUser && pass === expectedPass
-  if (!ok) {
-    console.error(
-      `[ShipStation] Header auth mismatch. Got user="${user}" (expected "${expectedUser}"), ` +
-      `pass match=${pass === expectedPass}`
-    )
-  }
-  return ok
+  return user === expectedUser && pass === expectedPass
 }
 
 function unauthorized(): NextResponse {
