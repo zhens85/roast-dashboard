@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPortalSupabaseClient } from '@/lib/supabase-portal'
+import { sendOrderNotificationEmail } from '@/lib/email'
 import type { CartItem } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -66,6 +67,12 @@ export async function POST(request: NextRequest) {
     // Order header was created but items failed — log for investigation
     return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 })
   }
+
+  // Send order notification email — fire-and-forget so an email failure
+  // never blocks the partner from receiving their order confirmation.
+  sendOrderNotificationEmail(order.id).catch((err) => {
+    console.error(`Order notification email failed for order ${order.id}:`, err)
+  })
 
   return NextResponse.json({ orderId: order.id }, { status: 201 })
 }
