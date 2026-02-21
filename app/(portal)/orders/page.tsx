@@ -110,19 +110,24 @@ export default async function PortalOrdersPage() {
 
                   {/* Order items */}
                   <div className="px-5 py-3 space-y-1">
-                    {order.order_items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm"
-                           style={{ color: '#555' }}>
-                        <span>
-                          <span className="font-medium">{item.quantity}×</span>{' '}
-                          {item.product_variants.products.name}{' '}
-                          <span style={{ color: '#999' }}>{item.product_variants.size}</span>
-                        </span>
-                        <span style={{ color: '#777' }}>
-                          {fmtPrice(item.unit_price_cents * item.quantity)}
-                        </span>
-                      </div>
-                    ))}
+                    {order.order_items.map((item) => {
+                      const variant  = item.product_variants
+                      const name     = variant?.products?.name ?? 'Unknown product'
+                      const size     = variant?.size ?? ''
+                      return (
+                        <div key={item.id} className="flex justify-between text-sm"
+                             style={{ color: '#555' }}>
+                          <span>
+                            <span className="font-medium">{item.quantity}×</span>{' '}
+                            {name}{' '}
+                            <span style={{ color: '#999' }}>{size}</span>
+                          </span>
+                          <span style={{ color: '#777' }}>
+                            {fmtPrice(item.unit_price_cents * item.quantity)}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
 
                   {/* Notes */}
