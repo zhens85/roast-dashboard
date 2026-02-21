@@ -7,7 +7,7 @@ const MAX_AGE_SECS  = 60 * 60 * 8  // 8 hours
 export async function POST(request: NextRequest) {
   const formData   = await request.formData()
   const password   = formData.get('password') as string
-  const redirectTo = (formData.get('redirect') as string) || '/admin'
+  const redirectTo = (formData.get('redirect') as string) || '/admin/orders'
 
   const correctPassword = process.env.DASHBOARD_PASSWORD
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (password !== correctPassword) {
-    const loginUrl = new URL('/login', request.url)
+    const loginUrl = new URL('/admin', request.url)
     loginUrl.searchParams.set('error', 'invalid')
     loginUrl.searchParams.set('redirect', redirectTo)
     return NextResponse.redirect(loginUrl, { status: 303 })

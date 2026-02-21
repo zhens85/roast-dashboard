@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-13 flex items-center justify-between gap-6">
 
           {/* Logo */}
-          <a href="/admin" className="flex-shrink-0 py-2">
+          <a href="/admin/orders" className="flex-shrink-0 py-2">
             <img
               src="//goodfolkscoffee.com/cdn/shop/files/goodfolkshorizontal_383x200.png?v=1614392019"
               alt="Good Folks Coffee"
@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {/* Nav links */}
           <nav className="flex items-center gap-0.5 flex-1">
             {[
-              { href: '/admin',          label: 'Orders'   },
+              { href: '/admin/orders',          label: 'Orders'   },
               { href: '/admin/products', label: 'Products' },
               { href: '/admin/partners', label: 'Partners' },
               { href: '/admin/tiers',    label: 'Tiers'    },

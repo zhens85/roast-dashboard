@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-// ── Staff dashboard auth ─────────────────────────────────────────────────────
 const STAFF_COOKIE  = 'roast_session'
 const SESSION_TOKEN = 'authenticated'
 
@@ -13,9 +12,8 @@ const PORTAL_PUBLIC_PATHS = [
   '/update-password',
 ]
 
-// Portal pages that DO require auth (any path not in PORTAL_PUBLIC_PATHS and not /admin or /login)
 function isPortalProtected(pathname: string): boolean {
-  if (pathname.startsWith('/admin') || pathname.startsWith('/login') || pathname.startsWith('/api')) return false
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api')) return false
   return !PORTAL_PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'))
 }
 
@@ -24,12 +22,11 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   // ── Staff dashboard guard ────────────────────────────────────────────────
-  if (pathname.startsWith('/admin')) {
+  // /admin is the login page (public). /admin/* requires the cookie.
+  if (pathname.startsWith('/admin/')) {
     const sessionCookie = request.cookies.get(STAFF_COOKIE)
     if (sessionCookie?.value !== SESSION_TOKEN) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(loginUrl)
+      return NextResponse.redirect(new URL('/admin', request.url))
     }
     return response
   }
@@ -63,7 +60,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/admin',
     '/admin/:path*',
     '/products',
     '/products/:path*',
