@@ -4,7 +4,9 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const ORDER_NOTIFICATION_TO = 'orders@goodfolkscoffee.com'
-const FROM_ADDRESS           = 'Good Folks Wholesale <noreply@goodfolks.coffee>'
+// TODO: switch back to 'Good Folks Wholesale <noreply@goodfolks.coffee>' once
+// the goodfolks.coffee domain is verified in Resend.
+const FROM_ADDRESS           = 'Good Folks Wholesale <onboarding@resend.dev>'
 
 function fmtPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
