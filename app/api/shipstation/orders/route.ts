@@ -20,8 +20,6 @@ import type { DashboardOrder } from '@/types'
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 function isAuthorized(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization') ?? ''
-
   const expectedUser = process.env.SHIPSTATION_STORE_USERNAME
   const expectedPass = process.env.SHIPSTATION_STORE_PASSWORD
 
@@ -30,27 +28,43 @@ function isAuthorized(request: NextRequest): boolean {
     return false
   }
 
+  // ShipStation sends credentials as query params (SS-UserName / SS-Password),
+  // not as an Authorization header, despite their docs suggesting Basic auth.
+  const { searchParams } = new URL(request.url)
+  const qUser = searchParams.get('SS-UserName') ?? searchParams.get('ss-username') ?? searchParams.get('username')
+  const qPass = searchParams.get('SS-Password') ?? searchParams.get('ss-password') ?? searchParams.get('password')
+
+  if (qUser !== null && qPass !== null) {
+    const ok = qUser === expectedUser && qPass === expectedPass
+    if (!ok) {
+      console.error(
+        `[ShipStation] Query param auth mismatch. Got user="${qUser}" (expected "${expectedUser}"), ` +
+        `pass match=${qPass === expectedPass}`
+      )
+    }
+    return ok
+  }
+
+  // Fallback: standard HTTP Basic auth header
+  const authHeader = request.headers.get('authorization') ?? ''
   if (!authHeader.startsWith('Basic ')) {
-    console.error('[ShipStation] No Basic auth header. Got:', authHeader.slice(0, 30) || '(empty)')
+    // Log all query param keys to see what ShipStation is actually sending
+    const allParams = Array.from(searchParams.entries()).map(([k]) => k).join(', ')
+    console.error(`[ShipStation] No auth found. Query params present: [${allParams || 'none'}]`)
     return false
   }
 
   const encoded = authHeader.slice('Basic '.length).trim()
   const decoded = Buffer.from(encoded, 'base64').toString('utf-8')
-
-  // Split on FIRST colon only — password may contain colons
   const colonIndex = decoded.indexOf(':')
-  if (colonIndex === -1) {
-    console.error('[ShipStation] Decoded credentials contain no colon')
-    return false
-  }
+  if (colonIndex === -1) return false
+
   const user = decoded.slice(0, colonIndex)
   const pass = decoded.slice(colonIndex + 1)
-
-  const ok = user === expectedUser && pass === expectedPass
+  const ok   = user === expectedUser && pass === expectedPass
   if (!ok) {
     console.error(
-      `[ShipStation] Auth mismatch. Got user="${user}" (expected "${expectedUser}"), ` +
+      `[ShipStation] Header auth mismatch. Got user="${user}" (expected "${expectedUser}"), ` +
       `pass match=${pass === expectedPass}`
     )
   }
