@@ -21,21 +21,40 @@ import type { DashboardOrder } from '@/types'
 
 function isAuthorized(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization') ?? ''
-  if (!authHeader.startsWith('Basic ')) return false
-
-  const encoded  = authHeader.slice('Basic '.length)
-  const decoded  = Buffer.from(encoded, 'base64').toString('utf-8')
-  const [user, pass] = decoded.split(':')
 
   const expectedUser = process.env.SHIPSTATION_STORE_USERNAME
   const expectedPass = process.env.SHIPSTATION_STORE_PASSWORD
 
   if (!expectedUser || !expectedPass) {
-    console.error('SHIPSTATION_STORE_USERNAME or SHIPSTATION_STORE_PASSWORD not set')
+    console.error('[ShipStation] SHIPSTATION_STORE_USERNAME or SHIPSTATION_STORE_PASSWORD not set')
     return false
   }
 
-  return user === expectedUser && pass === expectedPass
+  if (!authHeader.startsWith('Basic ')) {
+    console.error('[ShipStation] No Basic auth header. Got:', authHeader.slice(0, 30) || '(empty)')
+    return false
+  }
+
+  const encoded = authHeader.slice('Basic '.length).trim()
+  const decoded = Buffer.from(encoded, 'base64').toString('utf-8')
+
+  // Split on FIRST colon only — password may contain colons
+  const colonIndex = decoded.indexOf(':')
+  if (colonIndex === -1) {
+    console.error('[ShipStation] Decoded credentials contain no colon')
+    return false
+  }
+  const user = decoded.slice(0, colonIndex)
+  const pass = decoded.slice(colonIndex + 1)
+
+  const ok = user === expectedUser && pass === expectedPass
+  if (!ok) {
+    console.error(
+      `[ShipStation] Auth mismatch. Got user="${user}" (expected "${expectedUser}"), ` +
+      `pass match=${pass === expectedPass}`
+    )
+  }
+  return ok
 }
 
 function unauthorized(): NextResponse {
