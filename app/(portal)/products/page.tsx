@@ -15,8 +15,22 @@ async function fetchProductsAndPartner(): Promise<{
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // Fetch products with variants — RLS automatically filters by tier
-  const { data: products, error: productsError } = await supabase
+  // Fetch partner profile first — we need tier_id to filter products
+  const { data: partner, error: partnerError } = await supabase
+    .from('partners')
+    .select('*, partner_tiers(*)')
+    .eq('id', user.id)
+    .single()
+
+  if (partnerError) throw new Error(`Failed to fetch partner: ${partnerError.message}`)
+
+  const tierId     = partner?.tier_id ?? null
+  const discountPct = partner?.partner_tiers
+    ? Number(partner.partner_tiers.discount_pct)
+    : 0
+
+  // Fetch all active products with their variants
+  const { data: allProducts, error: productsError } = await supabase
     .from('products')
     .select(`
       *,
@@ -27,21 +41,17 @@ async function fetchProductsAndPartner(): Promise<{
 
   if (productsError) throw new Error(`Failed to fetch products: ${productsError.message}`)
 
-  // Fetch partner profile with tier info for discount
-  const { data: partner, error: partnerError } = await supabase
-    .from('partners')
-    .select('*, partner_tiers(*)')
-    .eq('id', user.id)
-    .single()
-
-  if (partnerError) throw new Error(`Failed to fetch partner: ${partnerError.message}`)
-
-  const discountPct = partner?.partner_tiers
-    ? Number(partner.partner_tiers.discount_pct)
-    : 0
+  // Filter by tier visibility:
+  // visible_to_tiers = null or [] means visible to everyone.
+  // Otherwise only show products that include this partner's tier_id.
+  const products = ((allProducts ?? []) as PortalProduct[]).filter((p) => {
+    if (!p.visible_to_tiers || p.visible_to_tiers.length === 0) return true
+    if (tierId === null) return false
+    return p.visible_to_tiers.includes(tierId)
+  })
 
   return {
-    products: (products as PortalProduct[]) ?? [],
+    products,
     partner: partner as Partner,
     discountPct,
   }
