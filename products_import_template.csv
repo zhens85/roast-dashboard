@@ -1,0 +1,9 @@
+name,description,origin_region,roast_level,process_method,roast_loss_factor,image_url,visible_to_tiers,size,price_dollars,sku,is_available
+Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"12oz",18.00,ETH-YIR-12OZ,true
+Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"2lb",28.00,ETH-YIR-2LB,true
+Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"5lb",60.00,ETH-YIR-5LB,true
+Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,12oz,16.00,COL-HUI-12OZ,true
+Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,2lb,25.00,COL-HUI-2LB,true
+Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,5lb,54.00,COL-HUI-5LB,false
+Guatemala Antigua,Dark chocolate and brown sugar with a full body,Guatemala - Antigua,medium-dark,Natural,0.13,,,12oz,15.00,GUA-ANT-12OZ,true
+Guatemala Antigua,Dark chocolate and brown sugar with a full body,Guatemala - Antigua,medium-dark,Natural,0.13,,,2lb,23.00,GUA-ANT-2LB,true
