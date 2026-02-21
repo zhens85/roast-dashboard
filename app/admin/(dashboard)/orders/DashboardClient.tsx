@@ -16,8 +16,6 @@ export default function DashboardClient({ initialOrders }: Props) {
   const [confirmStatus, setConfirmStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [cancellingId, setCancellingId]   = useState<number | null>(null)
   const [cancelError, setCancelError]     = useState<string | null>(null)
-  const [ssStatus, setSsStatus]           = useState<'idle' | 'pushing' | 'success' | 'partial' | 'error'>('idle')
-  const [ssResults, setSsResults]         = useState<{ orderId: number; success: boolean; error?: string }[]>([])
 
   const selectedOrders = useMemo(
     () => orders.filter((o) => selectedIds.has(o.id)),
@@ -99,27 +97,6 @@ export default function DashboardClient({ initialOrders }: Props) {
       setCancelError(`Could not cancel order #${orderId}. Please try again.`)
     } finally {
       setCancellingId(null)
-    }
-  }
-
-  async function handlePushToShipStation() {
-    if (selectedIds.size === 0) return
-    setSsStatus('pushing')
-    setSsResults([])
-    try {
-      const res = await fetch('/api/shipstation/push', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ orderIds: Array.from(selectedIds) }),
-      })
-      const data = await res.json()
-      const results = data.results ?? []
-      setSsResults(results)
-      const allOk     = results.every((r: { success: boolean }) => r.success)
-      const anyOk     = results.some((r:  { success: boolean }) => r.success)
-      setSsStatus(allOk ? 'success' : anyOk ? 'partial' : 'error')
-    } catch {
-      setSsStatus('error')
     }
   }
 
@@ -394,36 +371,10 @@ export default function DashboardClient({ initialOrders }: Props) {
               Open print view →
             </a>
 
-            <button
-              onClick={handlePushToShipStation}
-              disabled={ssStatus === 'pushing' || ssStatus === 'success'}
-              className="text-sm font-semibold px-5 py-3 rounded-lg border transition-opacity
-                         hover:opacity-90 disabled:opacity-50"
-              style={{ borderColor: '#466c7e', color: '#466c7e', backgroundColor: 'white' }}
-            >
-              {ssStatus === 'pushing' ? 'Pushing to ShipStation…'
-               : ssStatus === 'success' ? '✓ Pushed to ShipStation'
-               : 'Push to ShipStation'}
-            </button>
-
             {confirmStatus === 'error' && (
               <span className="text-sm" style={{ color: '#d60000' }}>
                 Something went wrong. Try again.
               </span>
-            )}
-
-            {/* ShipStation push results */}
-            {ssResults.length > 0 && (
-              <div className="w-full mt-1 space-y-1">
-                {ssResults.map((r) => (
-                  <p key={r.orderId} className="text-xs"
-                     style={{ color: r.success ? '#2d7a4f' : '#d60000' }}>
-                    {r.success
-                      ? `✓ Order #${r.orderId} pushed to ShipStation`
-                      : `✗ Order #${r.orderId}: ${r.error}`}
-                  </p>
-                ))}
-              </div>
             )}
           </section>
         </>
