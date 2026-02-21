@@ -4,9 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const ORDER_NOTIFICATION_TO = 'orders@goodfolkscoffee.com'
-// TODO: switch back to 'Good Folks Wholesale <noreply@goodfolks.coffee>' once
-// the goodfolks.coffee domain is verified in Resend.
-const FROM_ADDRESS           = 'Good Folks Wholesale <onboarding@resend.dev>'
+const FROM_ADDRESS           = 'Good Folks Wholesale <noreply@goodfolks.coffee>'
 
 function fmtPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
@@ -145,10 +143,21 @@ export async function sendOrderNotificationEmail(orderId: number): Promise<void>
 </body>
 </html>`
 
-  await resend.emails.send({
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set — email cannot be sent')
+  }
+
+  const { data, error: sendError } = await resend.emails.send({
     from:    FROM_ADDRESS,
     to:      ORDER_NOTIFICATION_TO,
     subject: `New Order #${order.id} — ${p.company_name} (${fmtPrice(order.total_amount_cents)})`,
     html,
   })
+
+  if (sendError) {
+    throw new Error(`Resend error: ${JSON.stringify(sendError)}`)
+  }
+
+  console.log(`Order notification email sent for order ${order.id}, Resend id: ${data?.id}`)
+
 }
