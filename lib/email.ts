@@ -3,8 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const ORDER_NOTIFICATION_TO = 'orders@goodfolkscoffee.com'
-const FROM_ADDRESS           = 'Good Folks Wholesale <noreply@goodfolks.coffee>'
+const ORDER_NOTIFICATION_TO   = 'orders@goodfolkscoffee.com'
+const APPROVAL_NOTIFICATION_TO = 'orders@goodfolkscoffee.com'
+const FROM_ADDRESS             = 'Good Folks Wholesale <noreply@goodfolks.coffee>'
 
 function fmtPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
@@ -159,5 +160,91 @@ export async function sendOrderNotificationEmail(orderId: number): Promise<void>
   }
 
   console.log(`Order notification email sent for order ${order.id}, Resend id: ${data?.id}`)
+}
 
+/**
+ * Sends a new partner approval request email to the staff inbox.
+ * Called on self-signup so staff can review and approve the account.
+ */
+export async function sendApprovalRequestEmail({
+  companyName,
+  contactPerson,
+  email,
+  partnerId,
+}: {
+  companyName:   string
+  contactPerson: string
+  email:         string
+  partnerId:     string
+}): Promise<void> {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set — email cannot be sent')
+  }
+
+  const dashboardUrl = `https://goodfolks.coffee/admin/partners`
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f7f5f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div style="background:#3b4858;padding:24px 32px;">
+      <p style="margin:0;color:white;font-size:20px;font-weight:600;">New Account Request</p>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,0.65);font-size:13px;">A partner has requested access to the wholesale portal</p>
+    </div>
+
+    <!-- Details -->
+    <div style="padding:28px 32px;">
+      <table style="width:100%;font-size:14px;border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 0;width:130px;color:#999;vertical-align:top;">Company</td>
+          <td style="padding:6px 0;color:#3b4858;font-weight:600;">${companyName}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#999;vertical-align:top;">Contact</td>
+          <td style="padding:6px 0;color:#3b4858;">${contactPerson}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#999;vertical-align:top;">Email</td>
+          <td style="padding:6px 0;color:#3b4858;">${email}</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:24px;">
+        <a href="${dashboardUrl}"
+           style="display:inline-block;background:#466c7e;color:white;text-decoration:none;
+                  font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">
+          Review in Dashboard →
+        </a>
+      </div>
+      <p style="margin:16px 0 0;font-size:12px;color:#aaa;">
+        Find <strong>${companyName}</strong> in the Partners section and click Approve to grant access,
+        or Delete to decline the request.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:14px 32px;background:#fafafa;border-top:1px solid #f0f0f0;">
+      <p style="margin:0;font-size:12px;color:#aaa;text-align:center;">Good Folks Coffee · Wholesale Portal</p>
+    </div>
+
+  </div>
+</body>
+</html>`
+
+  const { data, error: sendError } = await resend.emails.send({
+    from:    FROM_ADDRESS,
+    to:      APPROVAL_NOTIFICATION_TO,
+    subject: `New Account Request — ${companyName}`,
+    html,
+  })
+
+  if (sendError) {
+    throw new Error(`Resend error: ${JSON.stringify(sendError)}`)
+  }
+
+  console.log(`Approval request email sent for partner ${partnerId} (${email}), Resend id: ${data?.id}`)
 }

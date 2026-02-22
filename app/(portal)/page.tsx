@@ -2,15 +2,20 @@ import { redirect } from 'next/navigation'
 import { createPortalSupabaseClient } from '@/lib/supabase-portal'
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid:       'Incorrect email or password.',
-  missing:       'Please enter your email and password.',
-  default:       'Something went wrong. Please try again.',
+  invalid:          'Incorrect email or password.',
+  missing:          'Please enter your email and password.',
+  pending_approval: 'Your account is pending approval. You will be notified once access has been granted.',
+  default:          'Something went wrong. Please try again.',
+}
+
+const NOTICE_MESSAGES: Record<string, string> = {
+  pending_approval: 'Thanks for signing up! Your account is pending approval. We\'ll be in touch soon.',
 }
 
 export default async function PortalLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; notice?: string }>
 }) {
   const params = await searchParams
 
@@ -23,7 +28,8 @@ export default async function PortalLoginPage({
     // Not logged in or env var missing — just render the login form
   }
 
-  const errorMsg = params.error ? (ERROR_MESSAGES[params.error] ?? ERROR_MESSAGES.default) : null
+  const errorMsg  = params.error  ? (ERROR_MESSAGES[params.error]   ?? ERROR_MESSAGES.default) : null
+  const noticeMsg = params.notice ? (NOTICE_MESSAGES[params.notice] ?? null) : null
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4"
@@ -87,6 +93,13 @@ export default async function PortalLoginPage({
               }}
             />
           </div>
+
+          {noticeMsg && (
+            <div className="rounded-lg px-3 py-2.5 text-sm"
+                 style={{ backgroundColor: '#f0f4f5', color: '#466c7e' }}>
+              {noticeMsg}
+            </div>
+          )}
 
           {errorMsg && (
             <p className="text-sm" style={{ color: '#d60000' }}>{errorMsg}</p>

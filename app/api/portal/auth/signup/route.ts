@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPortalSupabaseClient } from '@/lib/supabase-portal'
+import { sendApprovalRequestEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   const formData      = await request.formData()
@@ -30,14 +31,11 @@ export async function POST(request: NextRequest) {
 
   if (authError || !authData.user) {
     const url = new URL('/signup', request.url)
-    // Common case: email already registered
     url.searchParams.set('error', authError?.message?.includes('already') ? 'email_taken' : 'auth_error')
     return NextResponse.redirect(url, { status: 303 })
   }
 
-  // Step 2: Insert the partner profile row
-  // The user is now auth'd as the new user (session cookie set by signUp),
-  // so the partners INSERT RLS policy (id = auth.uid()) will pass.
+  // Step 2: Insert the partner profile row — is_approved defaults to false
   const { error: partnerError } = await supabase
     .from('partners')
     .insert({
@@ -45,17 +43,33 @@ export async function POST(request: NextRequest) {
       email,
       company_name:   companyName,
       contact_person: contactPerson,
+      is_approved:    false,
     })
 
   if (partnerError) {
     console.error('Error inserting partner profile:', partnerError)
-    // Auth user was created but partner row failed — redirect with error
-    // User can try signing in and we can investigate the DB issue
     const url = new URL('/signup', request.url)
     url.searchParams.set('error', 'profile_error')
     return NextResponse.redirect(url, { status: 303 })
   }
 
-  // Session cookie is already set — redirect to products
-  return NextResponse.redirect(new URL('/products', request.url), { status: 303 })
+  // Step 3: Sign them out — they must wait for approval before accessing the portal
+  await supabase.auth.signOut()
+
+  // Step 4: Notify staff so they can review and approve the account
+  try {
+    await sendApprovalRequestEmail({
+      companyName,
+      contactPerson,
+      email,
+      partnerId: authData.user.id,
+    })
+  } catch (err) {
+    console.error('Approval request email failed:', err)
+  }
+
+  // Redirect to login page with a pending_approval notice
+  const url = new URL('/', request.url)
+  url.searchParams.set('notice', 'pending_approval')
+  return NextResponse.redirect(url, { status: 303 })
 }

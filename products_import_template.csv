@@ -1,9 +1,85 @@
 name,description,origin_region,roast_level,process_method,roast_loss_factor,image_url,visible_to_tiers,size,price_dollars,sku,is_available
-Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"12oz",18.00,ETH-YIR-12OZ,true
-Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"2lb",28.00,ETH-YIR-2LB,true
-Ethiopia Yirgacheffe,Bright and floral with notes of jasmine and bergamot,Ethiopia - Yirgacheffe,light,Washed,0.18,,,"5lb",60.00,ETH-YIR-5LB,true
-Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,12oz,16.00,COL-HUI-12OZ,true
-Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,2lb,25.00,COL-HUI-2LB,true
-Colombia Huila,Sweet caramel and red fruit with a clean finish,Colombia - Huila,medium,Washed,0.15,,,5lb,54.00,COL-HUI-5LB,false
-Guatemala Antigua,Dark chocolate and brown sugar with a full body,Guatemala - Antigua,medium-dark,Natural,0.13,,,12oz,15.00,GUA-ANT-12OZ,true
-Guatemala Antigua,Dark chocolate and brown sugar with a full body,Guatemala - Antigua,medium-dark,Natural,0.13,,,2lb,23.00,GUA-ANT-2LB,true
+Day Tripper,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DayTripperWebsite.jpg,,12oz,11.50,BL-DAYTRIPPER-12WB,true
+Day Tripper,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DayTripperWebsite.jpg,,2lb,30.00,BL-DAYTRIPPER-2WB,true
+Day Tripper,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DayTripperWebsite.jpg,,5lb,68.75,BL-DAYTRIPPER-5WB,true
+Fast Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/FastTrackWebsite.jpg,,12oz,11.50,BL-FASTTRACK-12WB,true
+Fast Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/FastTrackWebsite.jpg,,2lb,30.00,BL-FASTTRACK-2WB,true
+Fast Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/FastTrackWebsite.jpg,,5lb,68.75,BL-FASTTRACK-5WB,true
+Globe Trotter,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/GlobeTrotterWebsite.jpg,,12oz,11.50,BL-GLOBETROTTER-12WB,true
+Globe Trotter,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/GlobeTrotterWebsite.jpg,,2lb,30.00,BL-GLOBETROTTER-2WB,true
+Globe Trotter,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/GlobeTrotterWebsite.jpg,,5lb,68.75,BL-GLOBETROTTER-5WB,true
+Slow Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/slowtrack.jpg,,12oz,11.50,BL-SLOWTRACK-12WB,true
+Slow Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/slowtrack.jpg,,2lb,30.00,BL-SLOWTRACK-2WB,true
+Slow Track,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/slowtrack.jpg,,5lb,68.75,BL-SLOWTRACK-5WB,true
+Deep Space,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DeepSpaceWebsite.jpg,,12oz,11.50,BL-DEEPSPACE-12WB,true
+Deep Space,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DeepSpaceWebsite.jpg,,2lb,30.00,BL-DEEPSPACE-2WB,true
+Deep Space,,Blend,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DeepSpaceWebsite.jpg,,5lb,68.75,BL-DEEPSPACE-5WB,true
+House Blend,,Blend,,,,,,12oz,11.50,House-Blend-12oz-Whole-Bean,true
+House Blend,,Blend,,,,,,2lb,30.00,House-Blend-2lb-Whole-Bean,true
+House Blend,,Blend,,,,,,5lb,68.75,House-Blend-5lb-Whole-Bean,true
+Seasonal Blend,,Blend,,,,,,12oz,11.50,BL-SEASONAL-12WB,true
+Seasonal Blend,,Blend,,,,,,2lb,30.00,BL-SEASONAL-2WB,true
+Seasonal Blend,,Blend,,,,,,5lb,68.75,BL-SEASONAL-5WB,true
+PTY House Blend,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/ptywebsite.png,PTY_TIER_ID,12oz,10.00,PTY-House-Blend-12oz-Whole-Bean,true
+PTY House Blend,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/ptywebsite.png,PTY_TIER_ID,2lb,26.00,PTY-House-Blend-2lb-Whole-Bean,true
+PTY House Blend,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/ptywebsite.png,PTY_TIER_ID,5lb,60.00,PTY-House-Blend-5lb-Whole-Bean,true
+PTY Espresso,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/doughboxwebsite.jpg,PTY_TIER_ID,12oz,10.00,PTY-Espresso-12oz-Whole-Bean,true
+PTY Espresso,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/doughboxwebsite.jpg,PTY_TIER_ID,2lb,26.00,PTY-Espresso-2lb-Whole-Bean,true
+PTY Espresso,,PTY,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/doughboxwebsite.jpg,PTY_TIER_ID,5lb,60.00,PTY-Espresso-5lb-Whole-Bean,true
+Jolly Blend,,PTY,,,,,,PTY_TIER_ID,12oz,10.00,Seasonal-Blend-12oz-Whole-Bean-1,true
+Jolly Blend,,PTY,,,,,,PTY_TIER_ID,2lb,26.00,Seasonal-Blend-2lb-Whole-Bean-1,true
+Jolly Blend,,PTY,,,,,,PTY_TIER_ID,5lb,60.00,Seasonal-Blend-5lb-Whole-Bean-1,true
+Colombia Cauca,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/CaucaWebsite.jpg,,12oz,11.50,SO-CAUCA-12WB,true
+Colombia Cauca,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/CaucaWebsite.jpg,,2lb,30.00,SO-CAUCA-2WB,true
+Colombia Cauca,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/CaucaWebsite.jpg,,5lb,68.75,SO-CAUCA-5WB,true
+Colombia Andres,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andreswebsite.jpg,,12oz,10.00,SO-ANDRES-12WB,false
+Colombia Andres,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andreswebsite.jpg,,2lb,26.00,SO-ANDRES-2WB,false
+Colombia Andres,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andreswebsite.jpg,,5lb,60.00,SO-ANDRES-5WB,false
+Colombia Natural,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andresnaturalwebsite.jpg,,12oz,12.00,SO-ANDRESNAT-12WB,false
+Colombia Natural,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andresnaturalwebsite.jpg,,2lb,30.00,SO-ANDRESNAT-2WB,false
+Colombia Natural,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/andresnaturalwebsite.jpg,,5lb,75.00,SO-ANDRESNAT-5WB,false
+Colombia Light Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombialightroast.jpg,,12oz,10.00,SO-COL-LIGHT-12WB,false
+Colombia Light Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombialightroast.jpg,,2lb,26.00,SO-COL-LIGHT-2WB,false
+Colombia Light Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombialightroast.jpg,,5lb,60.00,SO-COL-LIGHT-5WB,false
+Colombia Medium Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiamediumroast.jpg,,12oz,10.00,SO-COLMED-12WB,false
+Colombia Medium Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiamediumroast.jpg,,2lb,26.00,SO-COLMED-2WB,false
+Colombia Medium Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiamediumroast.jpg,,5lb,60.00,SO-COLMED-5WB,false
+Colombia Dark Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiadarkroast.jpg,,12oz,10.00,SO-COLDARK-12WB,false
+Colombia Dark Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiadarkroast.jpg,,2lb,26.00,SO-COLDARK-2WB,false
+Colombia Dark Roast,,,Colombia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/colombiadarkroast.jpg,,5lb,60.00,SO-COLDARK-5WB,false
+Ethiopia Guji,,,Ethiopia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/coffee-ethiopia-guji-1.jpg,,12oz,11.50,SO-ETHIOPIA-12WB,false
+Ethiopia Guji,,,Ethiopia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/coffee-ethiopia-guji-1.jpg,,2lb,30.00,SO-ETHIOPIA-2WB,false
+Ethiopia Guji,,,Ethiopia,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/coffee-ethiopia-guji-1.jpg,,5lb,68.75,SO-ETHIOPIA-5WB,false
+Ethiopia Natural - Wush Wush,,,Ethiopia,,,,,12oz,15.00,SO-ETHIOPIANAT-12WB,false
+Ethiopia Natural - Wush Wush,,,Ethiopia,,,,,2lb,36.00,SO-ETHIOPIANAT-2WB,false
+Ethiopia Natural - Wush Wush,,,Ethiopia,,,,,5lb,85.00,SO-ETHIOPIANAT-5WB,false
+Guatemala Quetzal,,,Guatemala,,,,,12oz,11.50,SO-WAYKAN-12WB,false
+Guatemala Quetzal,,,Guatemala,,,,,2lb,30.00,SO-WAYKAN-2WB,false
+Guatemala Quetzal,,,Guatemala,,,,,5lb,68.75,SO-WAYKAN-5WB,false
+Guatemala Doña Maria,,,Guatemala,,,,,12oz,11.50,SO-MARIA-12WB,false
+Guatemala Doña Maria,,,Guatemala,,,,,2lb,36.00,SO-MARIA-2WB,false
+Guatemala Doña Maria,,,Guatemala,,,,,5lb,68.75,SO-MARIA-5WB,false
+Guatemala Doña Maria Espresso,,,Guatemala,,,,,12oz,10.00,SO-MARIAMED-12WB,false
+Guatemala Doña Maria Espresso,,,Guatemala,,,,,2lb,26.00,SO-MARIAMED-2WB,false
+Guatemala Doña Maria Espresso,,,Guatemala,,,,,5lb,60.00,SO-MARIAMED-5WB,false
+Kenya,,,Kenya,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/07/kenyakirinyagawebsite.jpg,,12oz,12.50,SO-KENYA-12WB,false
+Kenya,,,Kenya,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/07/kenyakirinyagawebsite.jpg,,2lb,34.00,SO-KENYA-2WB,false
+Kenya,,,Kenya,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/07/kenyakirinyagawebsite.jpg,,5lb,72.50,SO-KENYA-5WB,false
+Mexico Chiapas,,,Mexico,,,,,12oz,11.50,SO-MEX-12WB,true
+Mexico Chiapas,,,Mexico,,,,,2lb,30.00,SO-MEX-2WB,true
+Mexico Chiapas,,,Mexico,,,,,5lb,68.75,SO-MEX-5WB,true
+Peru Cajamarca,,,Peru,,,,,12oz,11.50,SO-PERU-12WB,true
+Peru Cajamarca,,,Peru,,,,,2lb,30.00,SO-PERU-2WB,true
+Peru Cajamarca,,,Peru,,,,,5lb,68.75,SO-PERU-5WB,true
+Sumatra,,,Sumatra,,,,,12oz,11.50,SO-SUMATRA-12WB,false
+Sumatra,,,Sumatra,,,,,2lb,30.00,SO-SUMATRA-2WB,false
+Sumatra,,,Sumatra,,,,,5lb,68.75,SO-SUMATRA-5WB,false
+Papua New Guinea,,,Papua New Guinea,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/PNGKunjinWebsite.jpg,,12oz,11.50,SO-PNG-12WB,false
+Papua New Guinea,,,Papua New Guinea,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/PNGKunjinWebsite.jpg,,2lb,30.00,SO-PNG-2WB,false
+Papua New Guinea,,,Papua New Guinea,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/PNGKunjinWebsite.jpg,,5lb,68.75,SO-PNG-5WB,false
+Tanzania Peaberry,,,Tanzania,,,,,12oz,11.50,SO-TANZ-12WB,false
+Tanzania Peaberry,,,Tanzania,,,,,2lb,30.00,SO-TANZ-2WB,false
+Tanzania Peaberry,,,Tanzania,,,,,5lb,68.75,SO-TANZ-5WB,false
+Decaf,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DecafWebsite.jpg,,12oz,11.50,SO-DECAF-12WB,true
+Decaf,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DecafWebsite.jpg,,2lb,30.00,SO-DECAF-2WB,true
+Decaf,,,,,,,https://goodfolks.getbeans.com/wp-content/uploads/2022/04/DecafWebsite.jpg,,5lb,68.75,SO-DECAF-5WB,true

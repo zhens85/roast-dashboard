@@ -64,10 +64,12 @@ function PartnerRow({
   onUpdate: (p: Partner) => void
   onDelete: (id: string) => void
 }) {
-  const [expanded,    setExpanded]    = useState(false)
-  const [editing,     setEditing]     = useState(false)
-  const [changingPw,  setChangingPw]  = useState(false)
-  const [deleting,    setDeleting]    = useState(false)
+  const [expanded,     setExpanded]     = useState(!partner.is_approved) // auto-expand pending
+  const [editing,      setEditing]      = useState(false)
+  const [changingPw,   setChangingPw]   = useState(false)
+  const [deleting,     setDeleting]     = useState(false)
+  const [approving,    setApproving]    = useState(false)
+  const [approveError, setApproveError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     company_name:   partner.company_name,
@@ -148,6 +150,18 @@ function PartnerRow({
     }
   }
 
+  async function handleApprove(approved: boolean) {
+    setApproving(true); setApproveError(null)
+    try {
+      const updated = await apiFetch(`/api/partners/${partner.id}/approve`, 'POST', { approved })
+      onUpdate(updated)
+    } catch (err) {
+      setApproveError((err as Error).message)
+    } finally {
+      setApproving(false)
+    }
+  }
+
   const tierName = partner.partner_tiers?.name ?? null
 
   return (
@@ -167,6 +181,14 @@ function PartnerRow({
             <span className="font-semibold" style={{ color: '#3b4858' }}>
               {partner.company_name}
             </span>
+            {!partner.is_approved && (
+              <span
+                className="text-xs rounded-full px-2 py-0.5 font-medium"
+                style={{ backgroundColor: '#fff3cd', color: '#856404' }}
+              >
+                Pending Approval
+              </span>
+            )}
             {tierName && (
               <span
                 className="text-xs rounded-full px-2 py-0.5"
@@ -184,6 +206,26 @@ function PartnerRow({
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          {!partner.is_approved ? (
+            <button
+              onClick={() => handleApprove(true)}
+              disabled={approving}
+              className="text-xs font-semibold px-3 py-1 rounded-lg text-white
+                         hover:opacity-90 disabled:opacity-50 transition-opacity"
+              style={{ backgroundColor: '#2d7a4f' }}
+            >
+              {approving ? 'Approving…' : 'Approve'}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleApprove(false)}
+              disabled={approving}
+              className="text-xs underline hover:opacity-70 transition-opacity disabled:opacity-50"
+              style={{ color: '#999' }}
+            >
+              {approving ? '…' : 'Revoke'}
+            </button>
+          )}
           <button
             onClick={() => { setEditing((e) => !e); setExpanded(true) }}
             className="text-xs underline hover:opacity-70 transition-opacity"
@@ -204,6 +246,9 @@ function PartnerRow({
 
       {deleteError && (
         <p className="px-4 pb-2 text-xs" style={{ color: '#d60000' }}>{deleteError}</p>
+      )}
+      {approveError && (
+        <p className="px-4 pb-2 text-xs" style={{ color: '#d60000' }}>{approveError}</p>
       )}
 
       {/* Expanded section */}
@@ -694,7 +739,12 @@ export default function PartnersClient({
 
   function handleCreated(partner: Partner) {
     setPartners((prev) =>
-      [...prev, partner].sort((a, b) => a.company_name.localeCompare(b.company_name))
+      [...prev, partner].sort((a, b) => {
+        // Pending partners float to the top
+        if (!a.is_approved && b.is_approved)  return -1
+        if (a.is_approved  && !b.is_approved) return  1
+        return a.company_name.localeCompare(b.company_name)
+      })
     )
   }
 

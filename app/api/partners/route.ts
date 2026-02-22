@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
       state:          body.state          ?? null,
       zip_code:       body.zip_code       ?? null,
       tier_id:        body.tier_id        ?? null,
+      is_approved:    true,   // staff-created accounts are approved immediately
     })
     .select('*, partner_tiers(*)')
     .single()

@@ -22,6 +22,7 @@ export interface Partner {
   state: string | null
   zip_code: string | null
   tier_id: number | null
+  is_approved: boolean
   partner_tiers: PartnerTier | null  // embedded via join: partners(*,partner_tiers(*))
   created_at: string
 }
