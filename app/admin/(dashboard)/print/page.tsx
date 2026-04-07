@@ -220,9 +220,11 @@ export default async function PrintPage({
                     <span className="text-stone-400 font-normal text-xs">
                       #{packOrder.orderId}
                     </span>
-                    <span className="text-stone-500 font-normal ml-2 text-xs">
-                      — {packOrder.partnerName}
-                    </span>
+                    {packOrder.partnerName !== packOrder.companyName && (
+                      <span className="text-stone-500 font-normal ml-2 text-xs">
+                        — {packOrder.partnerName}
+                      </span>
+                    )}
                   </div>
                   {packOrder.notes && (
                     <div className="text-xs text-stone-500 italic mt-0.5">

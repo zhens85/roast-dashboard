@@ -163,12 +163,20 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="font-medium" style={{ color: '#3b4858' }}>
-                      {order.partners.company_name}
+                      {order.partners?.company_name ?? order.customer_name ?? 'Shopify Customer'}
                     </span>
                     <span className="text-sm" style={{ color: '#bbb' }}>#{order.id}</span>
-                    <span className="text-sm" style={{ color: '#777777' }}>
-                      — {order.partners.contact_person}
-                    </span>
+                    {order.partners?.contact_person && (
+                      <span className="text-sm" style={{ color: '#777777' }}>
+                        — {order.partners.contact_person}
+                      </span>
+                    )}
+                    {order.source === 'shopify' && (
+                      <span className="text-xs font-medium px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}>
+                        Shopify
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm mt-0.5" style={{ color: '#999' }}>
                     {new Date(order.created_at).toLocaleDateString('en-US', {
@@ -351,12 +359,14 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
                   className="bg-white rounded-xl border p-4"
                   style={{ borderColor: '#e5e5e5' }}
                 >
-                  <div className="flex items-baseline gap-2 mb-1">
+                  <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                     <span className="font-semibold" style={{ color: '#3b4858' }}>
                       {packOrder.companyName}
                     </span>
                     <span className="text-xs" style={{ color: '#bbb' }}>#{packOrder.orderId}</span>
-                    <span className="text-sm" style={{ color: '#777' }}>— {packOrder.partnerName}</span>
+                    {packOrder.partnerName !== packOrder.companyName && (
+                      <span className="text-sm" style={{ color: '#777' }}>— {packOrder.partnerName}</span>
+                    )}
                   </div>
                   {packOrder.notes && (
                     <p className="text-xs italic mb-2" style={{ color: '#466c7e' }}>

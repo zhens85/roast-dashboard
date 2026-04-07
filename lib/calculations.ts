@@ -118,6 +118,8 @@ export function buildRoastSchedule(
 // Build the per-order packaging list from selected orders.
 // Product names are preserved as-ordered (no alias consolidation) so each
 // partner's pick slip shows their own product label.
+// Handles Shopify orders where partners may be null — falls back to
+// customer_name / customer_email stored directly on the order.
 export function buildPackagingList(orders: DashboardOrder[]): PackagingOrder[] {
   return orders.map((order) => {
     const items: PackagingItem[] = order.order_items.map((item) => ({
@@ -128,8 +130,8 @@ export function buildPackagingList(orders: DashboardOrder[]): PackagingOrder[] {
 
     return {
       orderId:     order.id,
-      partnerName: order.partners.contact_person,
-      companyName: order.partners.company_name,
+      partnerName: order.partners?.contact_person ?? order.customer_name ?? 'Shopify Customer',
+      companyName: order.partners?.company_name   ?? order.customer_email ?? `Shopify #${order.id}`,
       notes:       order.notes,
       items,
     }

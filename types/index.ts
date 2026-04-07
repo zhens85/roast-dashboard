@@ -51,13 +51,35 @@ export interface ProductVariant {
   created_at: string
 }
 
+export interface ShopifyShippingAddress {
+  name:          string | null
+  company:       string | null
+  address1:      string | null
+  address2:      string | null
+  city:          string | null
+  province_code: string | null
+  zip:           string | null
+  country_code:  string | null
+  phone:         string | null
+}
+
 export interface Order {
   id: number
-  partner_id: string
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  // null for Shopify orders that couldn't be matched to a partner account
+  partner_id:         string | null
+  status:             'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   total_amount_cents: number
-  notes: string | null
-  created_at: string
+  notes:              string | null
+  // 'portal' = placed via the wholesale ordering portal
+  // 'shopify' = imported from the Shopify store via webhook
+  source:             'portal' | 'shopify'
+  // Shopify order ID (e.g. "shopify_12345678") — used for deduplication
+  external_id:        string | null
+  // Populated for Shopify orders when no partner account email match was found
+  customer_name:      string | null
+  customer_email:     string | null
+  shipping_address:   ShopifyShippingAddress | null
+  created_at:         string
 }
 
 export interface OrderItem {
@@ -101,7 +123,8 @@ export interface DashboardOrderItem extends OrderItem {
 }
 
 export interface DashboardOrder extends Order {
-  partners: Partner
+  // null when the order came from Shopify and no partner email match was found
+  partners: Partner | null
   order_items: DashboardOrderItem[]
 }
 
