@@ -97,7 +97,23 @@ function weightOz(size: string): number {
 }
 
 function buildOrderXml(order: DashboardOrder): string {
-  const p = order.partners
+  const p    = order.partners
+  const ship = order.shipping_address
+
+  // Resolve display fields — prefer partner account data, fall back to
+  // Shopify customer / shipping address fields for unmatched orders.
+  const customerCode  = p?.email        ?? order.customer_email ?? ''
+  const contactName   = p?.contact_person ?? order.customer_name ?? ship?.name ?? ''
+  const companyName   = p?.company_name   ?? ship?.company ?? order.customer_name ?? `Shopify #${order.id}`
+  const phone         = p?.phone          ?? ship?.phone ?? ''
+  const email         = p?.email          ?? order.customer_email ?? ''
+  const address1      = p?.address        ?? ship?.address1 ?? ''
+  const city          = p?.city           ?? ship?.city ?? ''
+  const state         = p?.state          ?? ship?.province_code ?? ''
+  const zip           = p?.zip_code       ?? ship?.zip ?? ''
+  const internalNote  = p
+    ? `Good Folks wholesale order #${order.id} — ${p.company_name}`
+    : `Shopify order #${order.id} — ${companyName}`
 
   const itemsXml = order.order_items.map((item) => {
     const variant = item.product_variants
@@ -126,35 +142,35 @@ function buildOrderXml(order: DashboardOrder): string {
     <OrderStatus>awaiting_shipment</OrderStatus>
     <LastModified>${fmt(order.created_at)}</LastModified>
     <ShippingMethod></ShippingMethod>
-    <PaymentMethod>Invoice</PaymentMethod>
+    <PaymentMethod>${p ? 'Invoice' : 'Shopify'}</PaymentMethod>
     <OrderTotal>${total}</OrderTotal>
     <TaxAmount>0.00</TaxAmount>
     <ShippingAmount>0.00</ShippingAmount>
     <CustomerNotes>${cdata(order.notes)}</CustomerNotes>
-    <InternalNotes>${cdata(`Good Folks wholesale order #${order.id} — ${p.company_name}`)}</InternalNotes>
+    <InternalNotes>${cdata(internalNote)}</InternalNotes>
     <Gift>false</Gift>
     <GiftMessage></GiftMessage>
     <CustomField1></CustomField1>
     <CustomField2></CustomField2>
     <CustomField3></CustomField3>
     <Customer>
-      <CustomerCode>${cdata(p.email)}</CustomerCode>
+      <CustomerCode>${cdata(customerCode)}</CustomerCode>
       <BillTo>
-        <Name>${cdata(p.contact_person)}</Name>
-        <Company>${cdata(p.company_name)}</Company>
-        <Phone>${cdata(p.phone)}</Phone>
-        <Email>${cdata(p.email)}</Email>
+        <Name>${cdata(contactName)}</Name>
+        <Company>${cdata(companyName)}</Company>
+        <Phone>${cdata(phone)}</Phone>
+        <Email>${cdata(email)}</Email>
       </BillTo>
       <ShipTo>
-        <Name>${cdata(p.contact_person)}</Name>
-        <Company>${cdata(p.company_name)}</Company>
-        <Address1>${cdata(p.address)}</Address1>
+        <Name>${cdata(contactName)}</Name>
+        <Company>${cdata(companyName)}</Company>
+        <Address1>${cdata(address1)}</Address1>
         <Address2></Address2>
-        <City>${cdata(p.city)}</City>
-        <State>${cdata(p.state)}</State>
-        <PostalCode>${cdata(p.zip_code)}</PostalCode>
+        <City>${cdata(city)}</City>
+        <State>${cdata(state)}</State>
+        <PostalCode>${cdata(zip)}</PostalCode>
         <Country>US</Country>
-        <Phone>${cdata(p.phone)}</Phone>
+        <Phone>${cdata(phone)}</Phone>
       </ShipTo>
     </Customer>
     <Items>${itemsXml}
