@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Product, ProductVariant } from '@/types'
+import type { Product, ProductVariant, ProductAlias } from '@/types'
 import type { ProductWithVariants } from './page'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -16,6 +16,8 @@ async function apiFetch(url: string, method: string, body?: unknown) {
     const err = await res.json().catch(() => ({ error: 'Unknown error' }))
     throw new Error(err.error ?? 'Request failed')
   }
+  // 204 No Content — nothing to parse
+  if (res.status === 204) return null
   return res.json()
 }
 
@@ -23,13 +25,23 @@ function fmtPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-// Dollars string → cents integer
 function dollarsToCents(val: string): number {
   return Math.round(parseFloat(val) * 100)
 }
 
 const ROAST_LEVELS = ['light', 'medium', 'medium-dark', 'dark'] as const
 const SIZES        = ['12oz', '2lb', '5lb'] as const
+
+// ── Alias state helpers ───────────────────────────────────────────────────────
+
+// alias_product_id → canonical_product_id (simple ID lookup)
+type AliasIdMap = Record<number, number>
+
+function buildAliasIdMap(
+  aliases: Pick<ProductAlias, 'alias_product_id' | 'canonical_product_id'>[]
+): AliasIdMap {
+  return Object.fromEntries(aliases.map((a) => [a.alias_product_id, a.canonical_product_id]))
+}
 
 // ── Empty product form state ──────────────────────────────────────────────────
 
@@ -55,6 +67,204 @@ const EMPTY_FORM: ProductForm = {
   is_active:         true,
 }
 
+// ── Alias Section ─────────────────────────────────────────────────────────────
+// Shown inside an expanded product row. Lets admins map this product to a
+// canonical roast product (or clear an existing mapping).
+
+function AliasSection({
+  product,
+  allProducts,
+  aliasIdMap,
+  onAliasChange,
+}: {
+  product:       ProductWithVariants
+  allProducts:   ProductWithVariants[]
+  aliasIdMap:    AliasIdMap
+  onAliasChange: (aliasProductId: number, canonicalProductId: number | null) => void
+}) {
+  const currentCanonicalId = aliasIdMap[product.id] ?? null
+
+  // Products that alias TO this product (i.e., this product is the canonical target)
+  const inboundAliases = allProducts.filter((p) => aliasIdMap[p.id] === product.id)
+
+  // Dropdown options: all other products that are not themselves aliases
+  // (we only allow one level of aliasing)
+  const eligibleCanonicals = allProducts.filter(
+    (p) => p.id !== product.id && aliasIdMap[p.id] === undefined
+  )
+
+  const [editing,   setEditing]   = useState(false)
+  const [selected,  setSelected]  = useState<string>(String(currentCanonicalId ?? ''))
+  const [saving,    setSaving]    = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
+
+  const currentCanonicalName = currentCanonicalId
+    ? allProducts.find((p) => p.id === currentCanonicalId)?.name
+    : null
+
+  async function handleSave() {
+    const canonicalId = parseInt(selected, 10)
+    if (isNaN(canonicalId)) { setError('Please select a product'); return }
+    setSaving(true); setError(null)
+    try {
+      await apiFetch(`/api/products/${product.id}/alias`, 'PUT', {
+        canonical_product_id: canonicalId,
+      })
+      onAliasChange(product.id, canonicalId)
+      setEditing(false)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleClear() {
+    if (!confirm(`Remove the alias mapping for "${product.name}"? It will become a standalone product.`)) return
+    setSaving(true); setError(null)
+    try {
+      await apiFetch(`/api/products/${product.id}/alias`, 'DELETE')
+      onAliasChange(product.id, null)
+      setEditing(false)
+      setSelected('')
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function startEditing() {
+    setSelected(String(currentCanonicalId ?? eligibleCanonicals[0]?.id ?? ''))
+    setError(null)
+    setEditing(true)
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-stone-100">
+      <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+        Roast Alias
+      </p>
+
+      {/* This product is a canonical target — show inbound aliases, no edit */}
+      {inboundAliases.length > 0 && !currentCanonicalId && (
+        <div className="text-sm text-stone-600">
+          <span className="font-medium">{inboundAliases.length}</span>{' '}
+          product{inboundAliases.length !== 1 ? 's' : ''} roast as this coffee:
+          <ul className="mt-1 ml-3 space-y-0.5">
+            {inboundAliases.map((p) => (
+              <li key={p.id} className="text-stone-500 text-xs">
+                • {p.name}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-stone-400 italic mt-2">
+            This product is a canonical roast target and cannot itself be aliased.
+          </p>
+        </div>
+      )}
+
+      {/* Standalone product with no aliases in either direction */}
+      {inboundAliases.length === 0 && !currentCanonicalId && !editing && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-stone-400 italic">Standalone — roasted independently</span>
+          {eligibleCanonicals.length > 0 && (
+            <button
+              onClick={startEditing}
+              className="text-xs text-stone-400 hover:text-stone-700 underline"
+            >
+              Set alias
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Has an existing alias mapping — show it */}
+      {currentCanonicalId && !editing && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-stone-500">Roasted as</span>
+            <span
+              className="font-semibold px-2 py-0.5 rounded-full text-xs"
+              style={{ backgroundColor: '#eaf1f4', color: '#466c7e' }}
+            >
+              {currentCanonicalName ?? `Product #${currentCanonicalId}`}
+            </span>
+          </div>
+          <button
+            onClick={startEditing}
+            disabled={saving}
+            className="text-xs text-stone-400 hover:text-stone-700 underline disabled:opacity-50"
+          >
+            Change
+          </button>
+          <button
+            onClick={handleClear}
+            disabled={saving}
+            className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50"
+          >
+            {saving ? 'Removing…' : 'Remove alias'}
+          </button>
+        </div>
+      )}
+
+      {/* Editing alias */}
+      {editing && (
+        <div className="space-y-2">
+          <div className="flex items-end gap-2 flex-wrap">
+            <div>
+              <label className="block text-xs text-stone-500 mb-1">Roasted as</label>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="border border-stone-300 rounded px-2 py-1.5 text-sm min-w-48
+                           focus:outline-none focus:ring-1 focus:ring-amber-400"
+              >
+                <option value="">— Select a product —</option>
+                {eligibleCanonicals.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.roast_level ? ` (${p.roast_level})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving || !selected}
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white
+                         text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save Alias'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setError(null) }}
+              disabled={saving}
+              className="text-sm text-stone-500 hover:text-stone-700 px-2 py-1.5"
+            >
+              Cancel
+            </button>
+            {currentCanonicalId && (
+              <button
+                onClick={handleClear}
+                disabled={saving}
+                className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50 ml-1"
+              >
+                Remove alias
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-stone-400">
+            On the roast schedule this product will be merged with the selected coffee.
+            The pick list will still show <span className="font-medium">"{product.name}"</span>.
+          </p>
+          {error && <p className="text-red-600 text-xs">{error}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Add Variant Form ──────────────────────────────────────────────────────────
 
 function AddVariantForm({
@@ -62,14 +272,14 @@ function AddVariantForm({
   existingSizes,
   onAdded,
 }: {
-  productId: number
+  productId:     number
   existingSizes: string[]
-  onAdded: (variant: ProductVariant) => void
+  onAdded:       (variant: ProductVariant) => void
 }) {
   const availableSizes = SIZES.filter((s) => !existingSizes.includes(s))
-  const [size,  setSize]  = useState<'12oz' | '2lb' | '5lb'>(availableSizes[0] ?? '12oz')
-  const [price, setPrice] = useState('')
-  const [sku,   setSku]   = useState('')
+  const [size,   setSize]   = useState<'12oz' | '2lb' | '5lb'>(availableSizes[0] ?? '12oz')
+  const [price,  setPrice]  = useState('')
+  const [sku,    setSku]    = useState('')
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState<string | null>(null)
 
@@ -156,15 +366,15 @@ function VariantRow({
   onUpdate,
   onDelete,
 }: {
-  variant: ProductVariant
+  variant:  ProductVariant
   onUpdate: (v: ProductVariant) => void
   onDelete: (id: number) => void
 }) {
-  const [editing,  setEditing]  = useState(false)
-  const [price,    setPrice]    = useState((variant.price_cents / 100).toFixed(2))
-  const [sku,      setSku]      = useState(variant.sku)
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [price,   setPrice]   = useState((variant.price_cents / 100).toFixed(2))
+  const [sku,     setSku]     = useState(variant.sku)
+  const [saving,  setSaving]  = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
 
   async function handleSave() {
     setSaving(true); setError(null)
@@ -210,7 +420,6 @@ function VariantRow({
 
   return (
     <div className={`flex items-center gap-3 py-2 ${saving ? 'opacity-60' : ''}`}>
-      {/* Size badge */}
       <span className="text-xs font-semibold bg-stone-100 text-stone-600 rounded px-2 py-0.5 w-10 text-center flex-shrink-0">
         {variant.size}
       </span>
@@ -275,12 +484,18 @@ function VariantRow({
 
 function ProductRow({
   product,
+  allProducts,
+  aliasIdMap,
   onUpdate,
   onDelete,
+  onAliasChange,
 }: {
-  product: ProductWithVariants
-  onUpdate: (p: ProductWithVariants) => void
-  onDelete: (id: number) => void
+  product:       ProductWithVariants
+  allProducts:   ProductWithVariants[]
+  aliasIdMap:    AliasIdMap
+  onUpdate:      (p: ProductWithVariants) => void
+  onDelete:      (id: number) => void
+  onAliasChange: (aliasProductId: number, canonicalProductId: number | null) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [editing,  setEditing]  = useState(false)
@@ -301,6 +516,11 @@ function ProductRow({
     const order = { '12oz': 0, '2lb': 1, '5lb': 2 }
     return (order[a.size as keyof typeof order] ?? 0) - (order[b.size as keyof typeof order] ?? 0)
   })
+
+  const canonicalId   = aliasIdMap[product.id] ?? null
+  const canonicalName = canonicalId
+    ? allProducts.find((p) => p.id === canonicalId)?.name
+    : null
 
   async function handleSave() {
     setSaving(true); setError(null)
@@ -367,7 +587,6 @@ function ProductRow({
                      ${product.is_active ? 'border-stone-200' : 'border-stone-200 opacity-60'}`}>
       {/* Product header row */}
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Expand toggle */}
         <button
           onClick={() => setExpanded((e) => !e)}
           className="text-stone-400 hover:text-stone-700 flex-shrink-0 w-5 text-center"
@@ -375,7 +594,6 @@ function ProductRow({
           {expanded ? '▾' : '▸'}
         </button>
 
-        {/* Name + meta */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-stone-900">{product.name}</span>
@@ -386,6 +604,15 @@ function ProductRow({
             )}
             {product.origin_region && (
               <span className="text-xs text-stone-400">{product.origin_region}</span>
+            )}
+            {/* Alias badge */}
+            {canonicalName && (
+              <span
+                className="text-xs rounded-full px-2 py-0.5 font-medium"
+                style={{ backgroundColor: '#eaf1f4', color: '#466c7e' }}
+              >
+                → {canonicalName}
+              </span>
             )}
             {!product.is_active && (
               <span className="text-xs bg-red-50 text-red-500 rounded-full px-2 py-0.5">Inactive</span>
@@ -403,7 +630,6 @@ function ProductRow({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={toggleActive}
@@ -424,7 +650,7 @@ function ProductRow({
         </div>
       </div>
 
-      {/* Expanded: edit form + variants */}
+      {/* Expanded: edit form + variants + alias */}
       {expanded && (
         <div className="px-4 pb-4 border-t border-stone-100">
           {editing && (
@@ -561,6 +787,14 @@ function ProductRow({
               onAdded={handleVariantAdded}
             />
           </div>
+
+          {/* Alias management */}
+          <AliasSection
+            product={product}
+            allProducts={allProducts}
+            aliasIdMap={aliasIdMap}
+            onAliasChange={onAliasChange}
+          />
         </div>
       )}
     </div>
@@ -735,8 +969,14 @@ function AddProductForm({ onAdded }: { onAdded: (p: ProductWithVariants) => void
 
 // ── ProductsClient (main export) ──────────────────────────────────────────────
 
-export default function ProductsClient({ initialProducts }: { initialProducts: ProductWithVariants[] }) {
-  const [products, setProducts] = useState<ProductWithVariants[]>(initialProducts)
+interface ProductsClientProps {
+  initialProducts: ProductWithVariants[]
+  initialAliases:  Pick<ProductAlias, 'alias_product_id' | 'canonical_product_id'>[]
+}
+
+export default function ProductsClient({ initialProducts, initialAliases }: ProductsClientProps) {
+  const [products,  setProducts]  = useState<ProductWithVariants[]>(initialProducts)
+  const [aliasIdMap, setAliasIdMap] = useState<AliasIdMap>(() => buildAliasIdMap(initialAliases))
   const [showInactive, setShowInactive] = useState(false)
 
   const active   = products.filter((p) => p.is_active)
@@ -755,9 +995,20 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
     setProducts((prev) => [...prev, product].sort((a, b) => a.name.localeCompare(b.name)))
   }
 
+  function handleAliasChange(aliasProductId: number, canonicalProductId: number | null) {
+    setAliasIdMap((prev) => {
+      const next = { ...prev }
+      if (canonicalProductId === null) {
+        delete next[aliasProductId]
+      } else {
+        next[aliasProductId] = canonicalProductId
+      }
+      return next
+    })
+  }
+
   return (
     <div className="space-y-3">
-      {/* Filters / summary */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-stone-500">
           {active.length} active product{active.length !== 1 ? 's' : ''}
@@ -773,13 +1024,15 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
         )}
       </div>
 
-      {/* Product list */}
       {visible.map((product) => (
         <ProductRow
           key={product.id}
           product={product}
+          allProducts={products}
+          aliasIdMap={aliasIdMap}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onAliasChange={handleAliasChange}
         />
       ))}
 
@@ -789,7 +1042,6 @@ export default function ProductsClient({ initialProducts }: { initialProducts: P
         </div>
       )}
 
-      {/* Add new product */}
       <AddProductForm onAdded={handleAdded} />
     </div>
   )

@@ -1,8 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
-import type { DashboardOrder } from '@/types'
+import type { DashboardOrder, AliasMap } from '@/types'
 import DashboardClient from './DashboardClient'
 
-// Always fetch fresh data — orders change frequently
 export const dynamic = 'force-dynamic'
 
 async function fetchPendingOrders(): Promise<DashboardOrder[]> {
@@ -24,15 +23,51 @@ async function fetchPendingOrders(): Promise<DashboardOrder[]> {
     .eq('status', 'pending')
     .order('created_at', { ascending: true })
 
-  if (error) {
-    throw new Error(`Failed to fetch pending orders: ${error.message}`)
-  }
-
+  if (error) throw new Error(`Failed to fetch pending orders: ${error.message}`)
   return (data as DashboardOrder[]) ?? []
 }
 
+// Build a fully-resolved alias map for use in roast calculations.
+// Fetches product_aliases and joins the canonical product's name + loss factor
+// so the calculation layer doesn't need to do any additional lookups.
+async function fetchAliasMap(): Promise<AliasMap> {
+  const supabase = createServerSupabaseClient()
+
+  // Step 1: get all alias rows
+  const { data: aliases, error: aliasError } = await supabase
+    .from('product_aliases')
+    .select('alias_product_id, canonical_product_id')
+
+  if (aliasError || !aliases || aliases.length === 0) return {}  // table may not exist yet
+
+  // Step 2: fetch canonical product details
+  const canonicalIds = [...new Set(aliases.map((a) => a.canonical_product_id))]
+  const { data: canonicals, error: productError } = await supabase
+    .from('products')
+    .select('id, name, roast_loss_factor')
+    .in('id', canonicalIds)
+
+  if (productError || !canonicals) return {}
+
+  const canonicalById = Object.fromEntries(canonicals.map((p) => [p.id, p]))
+
+  // Step 3: build the resolved map
+  const aliasMap: AliasMap = {}
+  for (const alias of aliases) {
+    const canonical = canonicalById[alias.canonical_product_id]
+    if (!canonical) continue
+    aliasMap[alias.alias_product_id] = {
+      id:         canonical.id,
+      name:       canonical.name,
+      lossFactor: Number(canonical.roast_loss_factor),
+    }
+  }
+
+  return aliasMap
+}
+
 export default async function DashboardPage() {
-  const orders = await fetchPendingOrders()
+  const [orders, aliasMap] = await Promise.all([fetchPendingOrders(), fetchAliasMap()])
 
   return (
     <main className="p-6 max-w-6xl mx-auto">
@@ -43,7 +78,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <DashboardClient initialOrders={orders} />
+      <DashboardClient initialOrders={orders} initialAliasMap={aliasMap} />
     </main>
   )
 }

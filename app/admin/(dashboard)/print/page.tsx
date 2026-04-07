@@ -1,6 +1,11 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { buildRoastSchedule, buildPackagingList, fmtLbs } from '@/lib/calculations'
-import type { DashboardOrder } from '@/types'
+import {
+  buildRoastSchedule,
+  buildPackagingList,
+  buildPackagingTotals,
+  fmtLbs,
+} from '@/lib/calculations'
+import type { DashboardOrder, AliasMap } from '@/types'
 import { PrintButton } from './PrintButton'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +34,39 @@ async function fetchOrdersByIds(ids: number[]): Promise<DashboardOrder[]> {
   return (data as DashboardOrder[]) ?? []
 }
 
+async function fetchAliasMap(): Promise<AliasMap> {
+  const supabase = createServerSupabaseClient()
+
+  const { data: aliases, error: aliasError } = await supabase
+    .from('product_aliases')
+    .select('alias_product_id, canonical_product_id')
+
+  if (aliasError || !aliases || aliases.length === 0) return {}  // table may not exist yet
+
+  const canonicalIds = [...new Set(aliases.map((a) => a.canonical_product_id))]
+  const { data: canonicals, error: productError } = await supabase
+    .from('products')
+    .select('id, name, roast_loss_factor')
+    .in('id', canonicalIds)
+
+  if (productError || !canonicals) return {}
+
+  const canonicalById = Object.fromEntries(canonicals.map((p) => [p.id, p]))
+
+  const aliasMap: AliasMap = {}
+  for (const alias of aliases) {
+    const canonical = canonicalById[alias.canonical_product_id]
+    if (!canonical) continue
+    aliasMap[alias.alias_product_id] = {
+      id:         canonical.id,
+      name:       canonical.name,
+      lossFactor: Number(canonical.roast_loss_factor),
+    }
+  }
+
+  return aliasMap
+}
+
 export default async function PrintPage({
   searchParams,
 }: {
@@ -41,12 +79,16 @@ export default async function PrintPage({
     .map((s) => parseInt(s, 10))
     .filter((n) => !isNaN(n))
 
-  const orders = await fetchOrdersByIds(orderIds)
+  const [orders, aliasMap] = await Promise.all([
+    fetchOrdersByIds(orderIds),
+    fetchAliasMap(),
+  ])
 
   // Use stored loss factors — no UI overrides on the print page.
   // Staff adjusts overrides on the main dashboard, then opens print view.
-  const roastSchedule = buildRoastSchedule(orders, {})
-  const packagingList = buildPackagingList(orders)
+  const roastSchedule  = buildRoastSchedule(orders, {}, aliasMap)
+  const packagingList  = buildPackagingList(orders)
+  const packagingTotals = buildPackagingTotals(orders, aliasMap)
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -92,7 +134,20 @@ export default async function PrintPage({
               <tbody>
                 {roastSchedule.map((line) => (
                   <tr key={line.productId} className="border-t border-stone-100">
-                    <td className="py-2 pr-4 font-medium">{line.productName}</td>
+                    <td className="py-2 pr-4">
+                      <span className="font-medium">{line.productName}</span>
+                      {line.aliases.length > 0 && (
+                        <div className="text-stone-400 text-xs mt-0.5">
+                          includes:{' '}
+                          {line.aliases.map((a, j) => (
+                            <span key={a.productId}>
+                              {a.productName}
+                              {j < line.aliases.length - 1 ? ', ' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 pr-4 text-right">{fmtLbs(line.finishedWeightLbs)}</td>
                     <td className="py-2 pr-4 text-center text-stone-500">
                       {(line.roastLossFactorOverride * 100).toFixed(0)}%
@@ -113,6 +168,9 @@ export default async function PrintPage({
           </section>
 
           {/* ── PACKAGING TOTALS ── */}
+          {/* Each label shown individually so the team knows exactly how      */}
+          {/* many bags to prepare under each product name. "From Roast" shows */}
+          {/* which batch to pull from when a product is a house-blend alias.  */}
           <section className="mb-8">
             <h2 className="text-base font-bold border-b-2 border-stone-300 pb-1 mb-3">
               Packaging Totals
@@ -120,16 +178,20 @@ export default async function PrintPage({
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-stone-500 text-left border-b border-stone-200">
-                  <th className="pb-2 pr-4">Coffee</th>
+                  <th className="pb-2 pr-4">Label / Product</th>
+                  <th className="pb-2 pr-4">From Roast</th>
                   <th className="pb-2 pr-4 text-center">12oz</th>
                   <th className="pb-2 pr-4 text-center">2lb</th>
                   <th className="pb-2 text-center">5lb</th>
                 </tr>
               </thead>
               <tbody>
-                {roastSchedule.map((line) => (
+                {packagingTotals.map((line) => (
                   <tr key={line.productId} className="border-t border-stone-100">
                     <td className="py-1.5 pr-4 font-medium">{line.productName}</td>
+                    <td className="py-1.5 pr-4 text-stone-500">
+                      {line.canonicalProductName ?? '—'}
+                    </td>
                     <td className="py-1.5 pr-4 text-center">
                       {line.bagCounts['12oz'] > 0 ? `${line.bagCounts['12oz']}×` : '—'}
                     </td>

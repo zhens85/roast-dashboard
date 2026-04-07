@@ -120,8 +120,40 @@ export interface PortalOrder extends Order {
 }
 
 // ============================================================
+// Product alias types — for roast schedule consolidation
+// ============================================================
+
+// Raw row from the product_aliases table.
+export interface ProductAlias {
+  alias_product_id: number
+  canonical_product_id: number
+  created_at: string
+}
+
+// Resolved canonical product info, used by buildRoastSchedule.
+// Key: alias_product_id → value: the canonical product's id, name, and loss factor.
+export interface AliasCanonical {
+  id: number
+  name: string
+  lossFactor: number
+}
+export type AliasMap = Record<number, AliasCanonical>
+
+// ============================================================
 // Computed types for roast run state (local only, never saved)
 // ============================================================
+
+// Per-alias breakdown within a consolidated roast line.
+// Shows how many bags of each alias label come from a single roast batch.
+export interface RoastAliasEntry {
+  productId: number
+  productName: string
+  bagCounts: {
+    '12oz': number
+    '2lb': number
+    '5lb': number
+  }
+}
 
 export interface RoastLine {
   productId: number
@@ -134,6 +166,9 @@ export interface RoastLine {
     '2lb': number
     '5lb': number
   }
+  // Populated when alias products are consolidated into this roast line.
+  // Empty array means this product has no aliases in the current order set.
+  aliases: RoastAliasEntry[]
 }
 
 export interface PackagingItem {
@@ -148,4 +183,20 @@ export interface PackagingOrder {
   companyName: string
   notes: string | null
   items: PackagingItem[]
+}
+
+// Per-original-product packaging totals (no alias consolidation).
+// Used in the packaging totals table so staff knows exactly how many bags
+// to label with each product name, regardless of what was roasted.
+export interface PackagingTotalLine {
+  productId: number
+  productName: string
+  // The canonical product this aliases to, or null if standalone.
+  canonicalProductId: number | null
+  canonicalProductName: string | null
+  bagCounts: {
+    '12oz': number
+    '2lb': number
+    '5lb': number
+  }
 }

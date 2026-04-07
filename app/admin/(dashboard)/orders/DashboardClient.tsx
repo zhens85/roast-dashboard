@@ -1,14 +1,20 @@
 'use client'
 
 import { useState, useMemo, useTransition } from 'react'
-import type { DashboardOrder, RoastLine, PackagingOrder } from '@/types'
-import { buildRoastSchedule, buildPackagingList, fmtLbs } from '@/lib/calculations'
+import type { DashboardOrder, RoastLine, PackagingOrder, PackagingTotalLine, AliasMap } from '@/types'
+import {
+  buildRoastSchedule,
+  buildPackagingList,
+  buildPackagingTotals,
+  fmtLbs,
+} from '@/lib/calculations'
 
 interface Props {
-  initialOrders: DashboardOrder[]
+  initialOrders:   DashboardOrder[]
+  initialAliasMap: AliasMap
 }
 
-export default function DashboardClient({ initialOrders }: Props) {
+export default function DashboardClient({ initialOrders, initialAliasMap }: Props) {
   const [orders, setOrders]               = useState<DashboardOrder[]>(initialOrders)
   const [selectedIds, setSelectedIds]     = useState<Set<number>>(new Set())
   const [lossOverrides, setLossOverrides] = useState<Record<number, number>>({})
@@ -23,13 +29,19 @@ export default function DashboardClient({ initialOrders }: Props) {
   )
 
   const roastSchedule: RoastLine[] = useMemo(
-    () => buildRoastSchedule(selectedOrders, lossOverrides),
-    [selectedOrders, lossOverrides]
+    () => buildRoastSchedule(selectedOrders, lossOverrides, initialAliasMap),
+    [selectedOrders, lossOverrides, initialAliasMap]
   )
 
   const packagingList: PackagingOrder[] = useMemo(
     () => buildPackagingList(selectedOrders),
     [selectedOrders]
+  )
+
+  // Per-label totals — uses original product names, not consolidated aliases.
+  const packagingTotals: PackagingTotalLine[] = useMemo(
+    () => buildPackagingTotals(selectedOrders, initialAliasMap),
+    [selectedOrders, initialAliasMap]
   )
 
   function toggleOrder(orderId: number) {
@@ -226,8 +238,20 @@ export default function DashboardClient({ initialOrders }: Props) {
                   {roastSchedule.map((line, i) => (
                     <tr key={line.productId}
                         style={{ borderTop: i > 0 ? '1px solid #f0f0f0' : undefined }}>
-                      <td className="px-4 py-3 font-medium" style={{ color: '#3b4858' }}>
-                        {line.productName}
+                      <td className="px-4 py-3" style={{ color: '#3b4858' }}>
+                        <span className="font-medium">{line.productName}</span>
+                        {/* Show which alias products are consolidated into this line */}
+                        {line.aliases.length > 0 && (
+                          <div className="text-xs mt-0.5" style={{ color: '#999' }}>
+                            includes:{' '}
+                            {line.aliases.map((a, j) => (
+                              <span key={a.productId}>
+                                {a.productName}
+                                {j < line.aliases.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right" style={{ color: '#555' }}>
                         {fmtLbs(line.finishedWeightLbs)}
@@ -269,6 +293,8 @@ export default function DashboardClient({ initialOrders }: Props) {
           </section>
 
           {/* ── PACKAGING TOTALS ── */}
+          {/* Shows per-label bag counts — original product names preserved.         */}
+          {/* When a product is an alias, the "from" column shows the roast batch.  */}
           <section>
             <h2 className="text-xl font-semibold mb-3" style={{ color: '#3b4858' }}>
               Packaging — Totals
@@ -278,10 +304,10 @@ export default function DashboardClient({ initialOrders }: Props) {
               <table className="w-full text-sm">
                 <thead style={{ backgroundColor: '#fafafa' }}>
                   <tr>
-                    {['Coffee', '12oz', '2lb', '5lb'].map((h, i) => (
+                    {['Label / Product', 'From Roast', '12oz', '2lb', '5lb'].map((h, i) => (
                       <th key={h}
                           className={`px-4 py-3 text-xs font-medium uppercase tracking-wide
-                                      ${i === 0 ? 'text-left' : 'text-center'}`}
+                                      ${i < 2 ? 'text-left' : 'text-center'}`}
                           style={{ color: '#999' }}>
                         {h}
                       </th>
@@ -289,11 +315,17 @@ export default function DashboardClient({ initialOrders }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {roastSchedule.map((line, i) => (
+                  {packagingTotals.map((line, i) => (
                     <tr key={line.productId}
                         style={{ borderTop: i > 0 ? '1px solid #f0f0f0' : undefined }}>
                       <td className="px-4 py-3 font-medium" style={{ color: '#3b4858' }}>
                         {line.productName}
+                      </td>
+                      <td className="px-4 py-3 text-sm" style={{ color: '#466c7e' }}>
+                        {line.canonicalProductName
+                          ? <span className="font-medium">{line.canonicalProductName}</span>
+                          : <span style={{ color: '#bbb' }}>—</span>
+                        }
                       </td>
                       {(['12oz', '2lb', '5lb'] as const).map((size) => (
                         <td key={size} className="px-4 py-3 text-center" style={{ color: '#555' }}>
