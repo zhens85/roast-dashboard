@@ -217,11 +217,12 @@ async function handleCreate(shopifyOrder: ShopifyOrder): Promise<NextResponse> {
 
   // ── Resolve customer display name ────────────────────────────────────────
   const addr         = shopifyOrder.shipping_address ?? shopifyOrder.billing_address
-  const customerName = addr?.company
-    ?? addr?.name
-    ?? [addr?.first_name, addr?.last_name].filter(Boolean).join(' ')
-    || shopifyOrder.email
-    || `Shopify #${shopifyOrder.order_number}`
+  const customerName =
+    addr?.company ||
+    addr?.name ||
+    [addr?.first_name, addr?.last_name].filter(Boolean).join(' ') ||
+    shopifyOrder.email ||
+    `Shopify #${shopifyOrder.order_number}`
 
   // ── Build shipping address snapshot ─────────────────────────────────────
   const shippingAddress = addr ? {
