@@ -22,6 +22,8 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
   const [confirmStatus, setConfirmStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [cancellingId, setCancellingId]   = useState<number | null>(null)
   const [cancelError, setCancelError]     = useState<string | null>(null)
+  const [bulkError, setBulkError]         = useState<string | null>(null)
+  const [isBulkPending, setIsBulkPending] = useState(false)
 
   const selectedOrders = useMemo(
     () => orders.filter((o) => selectedIds.has(o.id)),
@@ -85,6 +87,31 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
     })
   }
 
+  async function handleBulkAction(action: 'delete' | 'archive') {
+    if (selectedIds.size === 0) return
+    const count = selectedIds.size
+    const label = action === 'delete' ? 'permanently delete' : 'archive'
+    if (!window.confirm(`${label.charAt(0).toUpperCase() + label.slice(1)} ${count} order${count !== 1 ? 's' : ''}? ${action === 'delete' ? 'This cannot be undone.' : ''}`)) return
+
+    setIsBulkPending(true)
+    setBulkError(null)
+    try {
+      const res = await fetch(`/api/orders/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: Array.from(selectedIds) }),
+      })
+      if (!res.ok) throw new Error('API error')
+      const ids = Array.from(selectedIds)
+      setOrders((prev) => prev.filter((o) => !ids.includes(o.id)))
+      setSelectedIds(new Set())
+    } catch {
+      setBulkError(`Could not ${action} orders. Please try again.`)
+    } finally {
+      setIsBulkPending(false)
+    }
+  }
+
   async function handleCancelOrder(e: React.MouseEvent, orderId: number) {
     e.stopPropagation()
     if (!window.confirm('Cancel this order? The partner will need to resubmit if needed.')) return
@@ -119,7 +146,7 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
 
       {/* ── ORDER QUEUE ── */}
       <section>
-        <div className="flex items-center gap-4 mb-3">
+        <div className="flex items-center gap-4 mb-3 flex-wrap">
           <h2 className="text-xl font-semibold" style={{ color: '#3b4858' }}>Order Queue</h2>
           {orders.length > 0 && (
             <button
@@ -130,10 +157,38 @@ export default function DashboardClient({ initialOrders, initialAliasMap }: Prop
               {selectedIds.size === orders.length ? 'Deselect all' : 'Select all'}
             </button>
           )}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs" style={{ color: '#999' }}>
+                {selectedIds.size} selected
+              </span>
+              <button
+                onClick={() => handleBulkAction('archive')}
+                disabled={isBulkPending}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-opacity
+                           hover:opacity-80 disabled:opacity-50"
+                style={{ borderColor: '#d0d0d0', color: '#555', backgroundColor: '#fafafa' }}
+              >
+                Archive
+              </button>
+              <button
+                onClick={() => handleBulkAction('delete')}
+                disabled={isBulkPending}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity
+                           hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
 
         {cancelError && (
           <p className="mb-2 text-sm" style={{ color: '#d60000' }}>{cancelError}</p>
+        )}
+        {bulkError && (
+          <p className="mb-2 text-sm" style={{ color: '#d60000' }}>{bulkError}</p>
         )}
 
         {orders.length === 0 ? (

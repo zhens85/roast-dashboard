@@ -21,7 +21,7 @@ async function fetchPendingOrders(): Promise<DashboardOrder[]> {
       )
     `)
     .eq('status', 'pending')
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Failed to fetch pending orders: ${error.message}`)
   return (data as DashboardOrder[]) ?? []
