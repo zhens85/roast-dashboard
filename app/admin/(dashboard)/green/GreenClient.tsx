@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { GreenLot, GreenLotTransaction, BlendRecipe, BlendRecipeItem, Product } from '@/types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -338,38 +338,74 @@ function LotExpandedDetail({
   const [transactions, setTransactions] = useState<GreenLotTransaction[] | null>(null)
   const [loadingTx, setLoadingTx] = useState(false)
   const [txError, setTxError] = useState<string | null>(null)
-  const [showAdjForm, setShowAdjForm] = useState(false)
 
-  // Adjustment form state
-  const [adjType, setAdjType] = useState<'received' | 'transferred' | 'adjustment'>('adjustment')
+  // Which inline form is open: null | 'transfer' | 'adjustment'
+  const [openForm, setOpenForm] = useState<'transfer' | 'adjustment' | null>(null)
+
+  // Transfer form state
+  const [xferBags, setXferBags] = useState('')
+  const [xferDirection, setXferDirection] = useState<'toRoastery' | 'toWarehouse'>('toRoastery')
+  const [xferNotes, setXferNotes] = useState('')
+  const [xferSaving, setXferSaving] = useState(false)
+  const [xferError, setXferError] = useState<string | null>(null)
+
+  // Weight adjustment form state
+  const [adjType, setAdjType] = useState<'received' | 'roasted' | 'adjustment'>('adjustment')
   const [adjWeight, setAdjWeight] = useState('')
   const [adjNotes, setAdjNotes] = useState('')
-  const [adjLocFrom, setAdjLocFrom] = useState('')
-  const [adjLocTo, setAdjLocTo] = useState('')
   const [adjSaving, setAdjSaving] = useState(false)
   const [adjError, setAdjError] = useState<string | null>(null)
 
   const [archiving, setArchiving] = useState(false)
 
-  // Load transactions lazily on first expand
-  async function loadTransactions() {
-    if (transactions !== null) return
+  // Load transactions on mount
+  useEffect(() => {
+    let cancelled = false
     setLoadingTx(true)
     setTxError(null)
+    apiFetch(`/api/green/lots/${lot.id}/transaction`, 'GET')
+      .then((data) => { if (!cancelled) setTransactions(data ?? []) })
+      .catch((err) => { if (!cancelled) setTxError((err as Error).message) })
+      .finally(() => { if (!cancelled) setLoadingTx(false) })
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lot.id])
+
+  // ── Transfer bags ────────────────────────────────────────────────────────────
+
+  async function handleTransferSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const bags = parseInt(xferBags, 10)
+    if (isNaN(bags) || bags <= 0) { setXferError('Enter a positive number of bags'); return }
+
+    // positive = WH→Roastery, negative = Roastery→WH
+    const bagCount = xferDirection === 'toRoastery' ? bags : -bags
+    const fromLabel = xferDirection === 'toRoastery' ? (lot.origin_warehouse ?? 'Warehouse') : 'Roastery'
+    const toLabel   = xferDirection === 'toRoastery' ? 'Roastery' : (lot.origin_warehouse ?? 'Warehouse')
+
+    setXferSaving(true)
+    setXferError(null)
     try {
-      const data = await apiFetch(`/api/green/lots/${lot.id}/transaction`, 'GET')
-      setTransactions(data ?? [])
+      const result = await apiFetch(`/api/green/lots/${lot.id}/transaction`, 'POST', {
+        type:          'transferred',
+        bag_count:     bagCount,
+        location_from: fromLabel,
+        location_to:   toLabel,
+        notes:         xferNotes.trim() || null,
+      })
+      onUpdated(result.lot)
+      setTransactions((prev) => [result.transaction, ...(prev ?? [])])
+      setXferBags('')
+      setXferNotes('')
+      setOpenForm(null)
     } catch (err) {
-      setTxError((err as Error).message)
+      setXferError((err as Error).message)
     } finally {
-      setLoadingTx(false)
+      setXferSaving(false)
     }
   }
 
-  // Load on mount of expanded detail
-  useState(() => {
-    loadTransactions()
-  })
+  // ── Weight adjustment ────────────────────────────────────────────────────────
 
   async function handleAdjSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -380,19 +416,15 @@ function LotExpandedDetail({
     setAdjError(null)
     try {
       const result = await apiFetch(`/api/green/lots/${lot.id}/transaction`, 'POST', {
-        type:          adjType,
-        weight_lbs:    wt,
-        location_from: adjType === 'transferred' ? adjLocFrom.trim() || null : null,
-        location_to:   adjType === 'transferred' ? adjLocTo.trim() || null : null,
-        notes:         adjNotes.trim() || null,
+        type:       adjType,
+        weight_lbs: wt,
+        notes:      adjNotes.trim() || null,
       })
       onUpdated(result.lot)
       setTransactions((prev) => [result.transaction, ...(prev ?? [])])
       setAdjWeight('')
       setAdjNotes('')
-      setAdjLocFrom('')
-      setAdjLocTo('')
-      setShowAdjForm(false)
+      setOpenForm(null)
     } catch (err) {
       setAdjError((err as Error).message)
     } finally {
@@ -412,6 +444,8 @@ function LotExpandedDetail({
       setArchiving(false)
     }
   }
+
+  const warehouseLabel = lot.origin_warehouse ?? 'Warehouse'
 
   return (
     <div className="px-4 pb-4 border-t" style={{ borderColor: '#e5e5e5' }}>
@@ -442,8 +476,8 @@ function LotExpandedDetail({
           </div>
         )}
         <div>
-          <span style={{ color: '#777' }}>Bags: </span>
-          <span style={{ color: '#3b4858' }}>{lot.bag_count} × {Number(lot.bag_weight_lbs).toFixed(2)} lbs</span>
+          <span style={{ color: '#777' }}>Bag size: </span>
+          <span style={{ color: '#3b4858' }}>{Number(lot.bag_weight_lbs).toFixed(2)} lbs each</span>
         </div>
         <div>
           <span style={{ color: '#777' }}>Added: </span>
@@ -457,37 +491,132 @@ function LotExpandedDetail({
         )}
       </div>
 
-      {/* Adjustment form trigger */}
-      <div className="mt-4 flex flex-wrap gap-2 items-center">
-        {!showAdjForm && (
+      {/* Action buttons */}
+      {openForm === null && (
+        <div className="mt-4 flex flex-wrap gap-2 items-center">
           <button
-            onClick={() => setShowAdjForm(true)}
+            onClick={() => setOpenForm('transfer')}
             className="text-xs font-medium px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity"
             style={{ backgroundColor: '#466c7e' }}
           >
-            Log Adjustment
+            Transfer Bags
           </button>
-        )}
-        {lot.status === 'active' && !showAdjForm && (
           <button
-            onClick={handleArchive}
-            disabled={archiving}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg text-white hover:opacity-80 transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: '#d60000' }}
+            onClick={() => setOpenForm('adjustment')}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#ccc', color: '#3b4858' }}
           >
-            {archiving ? 'Archiving…' : 'Archive'}
+            Log Weight Change
           </button>
-        )}
-      </div>
+          {lot.status === 'active' && (
+            <button
+              onClick={handleArchive}
+              disabled={archiving}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg text-white hover:opacity-80 transition-opacity disabled:opacity-50"
+              style={{ backgroundColor: '#d60000' }}
+            >
+              {archiving ? 'Archiving…' : 'Archive'}
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* Adjustment form */}
-      {showAdjForm && (
+      {/* Transfer bags form */}
+      {openForm === 'transfer' && (
+        <form
+          onSubmit={handleTransferSubmit}
+          className="mt-3 border rounded-lg p-3 bg-gray-50 space-y-3"
+          style={{ borderColor: '#e5e5e5' }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#777' }}>
+            Transfer Bags
+          </p>
+
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <label className="block text-xs mb-1" style={{ color: '#777' }}>Direction</label>
+              <select
+                value={xferDirection}
+                onChange={(e) => setXferDirection(e.target.value as typeof xferDirection)}
+                className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
+                style={{ borderColor: '#e5e5e5' }}
+              >
+                <option value="toRoastery">{warehouseLabel} → Roastery</option>
+                <option value="toWarehouse">Roastery → {warehouseLabel}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs mb-1" style={{ color: '#777' }}>
+                Number of Bags
+                {xferDirection === 'toRoastery'
+                  ? ` (${lot.bags_at_warehouse} available at ${warehouseLabel})`
+                  : ` (${lot.bags_at_roastery} available at Roastery)`}
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={xferBags}
+                onChange={(e) => setXferBags(e.target.value)}
+                placeholder="10"
+                autoFocus
+                className="border rounded px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-1"
+                style={{ borderColor: '#e5e5e5' }}
+              />
+            </div>
+          </div>
+
+          {/* Weight preview */}
+          {parseInt(xferBags, 10) > 0 && (
+            <p className="text-xs" style={{ color: '#466c7e' }}>
+              ≈ {(parseInt(xferBags, 10) * Number(lot.bag_weight_lbs)).toFixed(1)} lbs
+            </p>
+          )}
+
+          <div>
+            <label className="block text-xs mb-1" style={{ color: '#777' }}>Notes</label>
+            <input
+              type="text"
+              value={xferNotes}
+              onChange={(e) => setXferNotes(e.target.value)}
+              placeholder="optional"
+              className="border rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1"
+              style={{ borderColor: '#e5e5e5' }}
+            />
+          </div>
+
+          {xferError && <p className="text-xs" style={{ color: '#d60000' }}>{xferError}</p>}
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={xferSaving}
+              className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              style={{ backgroundColor: '#466c7e' }}
+            >
+              {xferSaving ? 'Saving…' : 'Transfer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOpenForm(null); setXferError(null) }}
+              className="text-xs px-3 py-1.5 hover:opacity-70"
+              style={{ color: '#777' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Weight adjustment form */}
+      {openForm === 'adjustment' && (
         <form
           onSubmit={handleAdjSubmit}
           className="mt-3 border rounded-lg p-3 bg-gray-50 space-y-3"
           style={{ borderColor: '#e5e5e5' }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#777' }}>Log Adjustment</p>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#777' }}>Log Weight Change</p>
 
           <div className="flex flex-wrap gap-3 items-end">
             <div>
@@ -498,53 +627,27 @@ function LotExpandedDetail({
                 className="border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1"
                 style={{ borderColor: '#e5e5e5' }}
               >
-                <option value="received">Received</option>
-                <option value="transferred">Transferred</option>
+                <option value="roasted">Roasted (use negative lbs)</option>
+                <option value="received">Received (additional weight)</option>
                 <option value="adjustment">Adjustment</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs mb-1" style={{ color: '#777' }}>
-                Weight (lbs) — negative to remove
+                Weight (lbs) — negative removes weight
               </label>
               <input
                 type="number"
                 step="0.01"
                 value={adjWeight}
                 onChange={(e) => setAdjWeight(e.target.value)}
-                placeholder="-10.00"
-                className="border rounded px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-1"
+                placeholder="-132.28"
+                autoFocus
+                className="border rounded px-2 py-1.5 text-sm w-32 focus:outline-none focus:ring-1"
                 style={{ borderColor: '#e5e5e5' }}
               />
             </div>
-
-            {adjType === 'transferred' && (
-              <>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: '#777' }}>From</label>
-                  <input
-                    type="text"
-                    value={adjLocFrom}
-                    onChange={(e) => setAdjLocFrom(e.target.value)}
-                    placeholder="Roastery"
-                    className="border rounded px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-1"
-                    style={{ borderColor: '#e5e5e5' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1" style={{ color: '#777' }}>To</label>
-                  <input
-                    type="text"
-                    value={adjLocTo}
-                    onChange={(e) => setAdjLocTo(e.target.value)}
-                    placeholder="Warehouse"
-                    className="border rounded px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-1"
-                    style={{ borderColor: '#e5e5e5' }}
-                  />
-                </div>
-              </>
-            )}
           </div>
 
           <div>
@@ -572,7 +675,7 @@ function LotExpandedDetail({
             </button>
             <button
               type="button"
-              onClick={() => { setShowAdjForm(false); setAdjError(null) }}
+              onClick={() => { setOpenForm(null); setAdjError(null) }}
               className="text-xs px-3 py-1.5 hover:opacity-70"
               style={{ color: '#777' }}
             >
@@ -595,25 +698,33 @@ function LotExpandedDetail({
         {transactions && transactions.length > 0 && (
           <div className="divide-y text-xs" style={{ borderColor: '#e5e5e5' }}>
             {transactions.map((tx) => (
-              <div key={tx.id} className="py-1.5 flex items-start gap-3">
+              <div key={tx.id} className="py-1.5 flex items-start gap-3 flex-wrap">
                 <span
                   className="flex-shrink-0 rounded px-1.5 py-0.5 font-medium capitalize"
                   style={{
                     backgroundColor:
-                      tx.type === 'received' ? '#dcfce7' :
-                      tx.type === 'roasted'  ? '#fef3c7' :
+                      tx.type === 'received'    ? '#dcfce7' :
+                      tx.type === 'roasted'     ? '#fef3c7' :
                       tx.type === 'transferred' ? '#e0f2fe' : '#f3f4f6',
                     color:
-                      tx.type === 'received' ? '#15803d' :
-                      tx.type === 'roasted'  ? '#92400e' :
+                      tx.type === 'received'    ? '#15803d' :
+                      tx.type === 'roasted'     ? '#92400e' :
                       tx.type === 'transferred' ? '#0369a1' : '#374151',
                   }}
                 >
                   {tx.type}
                 </span>
-                <span style={{ color: Number(tx.weight_lbs) >= 0 ? '#16a34a' : '#d60000' }}>
-                  {Number(tx.weight_lbs) >= 0 ? '+' : ''}{Number(tx.weight_lbs).toFixed(2)} lbs
-                </span>
+
+                {tx.type === 'transferred' && tx.bag_count != null ? (
+                  <span style={{ color: '#0369a1' }}>
+                    {Math.abs(tx.bag_count)} bag{Math.abs(tx.bag_count) !== 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span style={{ color: Number(tx.weight_lbs) >= 0 ? '#16a34a' : '#d60000' }}>
+                    {Number(tx.weight_lbs) >= 0 ? '+' : ''}{Number(tx.weight_lbs).toFixed(2)} lbs
+                  </span>
+                )}
+
                 {tx.location_from && tx.location_to && (
                   <span style={{ color: '#777' }}>
                     {tx.location_from} → {tx.location_to}
@@ -706,14 +817,14 @@ function InventorySection({
             color: '#777',
             backgroundColor: '#fafafa',
             borderBottom: '1px solid #e5e5e5',
-            gridTemplateColumns: '1.5rem 7rem 1fr 7rem 8rem 6rem 6rem 5rem 5rem',
+            gridTemplateColumns: '1.5rem 7rem 1fr 7rem 9rem 6rem 6rem 5rem 5rem',
           }}
         >
           <span />
           <span>Lot #</span>
           <span>Name</span>
           <span>Origin</span>
-          <span>Location</span>
+          <span>Bags</span>
           <span className="text-right">On Hand</span>
           <span className="text-right">Initial</span>
           <span className="text-right">% Left</span>
@@ -737,7 +848,7 @@ function InventorySection({
               <div
                 className="grid items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors"
                 style={{
-                  gridTemplateColumns: '1.5rem 7rem 1fr 7rem 8rem 6rem 6rem 5rem 5rem',
+                  gridTemplateColumns: '1.5rem 7rem 1fr 7rem 9rem 6rem 6rem 5rem 5rem',
                   opacity: lot.status === 'archived' ? 0.55 : 1,
                 }}
                 onClick={() => toggleExpand(lot.id)}
@@ -765,7 +876,24 @@ function InventorySection({
                   )}
                 </div>
                 <span className="text-sm" style={{ color: '#555' }}>{lot.origin}</span>
-                <span className="text-sm" style={{ color: '#555' }}>{lot.location}</span>
+                {/* Bags: show warehouse and roastery split */}
+                <div className="text-xs leading-snug">
+                  {Number(lot.bags_at_warehouse) > 0 && (
+                    <div style={{ color: '#555' }}>
+                      <span style={{ color: '#777' }}>WH </span>
+                      {lot.bags_at_warehouse}
+                    </div>
+                  )}
+                  {Number(lot.bags_at_roastery) > 0 && (
+                    <div style={{ color: '#555' }}>
+                      <span style={{ color: '#777' }}>R&nbsp;&nbsp; </span>
+                      {lot.bags_at_roastery}
+                    </div>
+                  )}
+                  {Number(lot.bags_at_warehouse) === 0 && Number(lot.bags_at_roastery) === 0 && (
+                    <span style={{ color: '#bbb' }}>—</span>
+                  )}
+                </div>
                 <span className="text-sm text-right" style={{ color: '#3b4858' }}>
                   {fmtLbs(lot.total_weight_lbs)}
                 </span>

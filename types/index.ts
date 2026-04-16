@@ -240,6 +240,9 @@ export interface GreenLot {
   origin_warehouse: string | null
   bag_count: number
   bag_weight_lbs: number
+  // bags_at_warehouse + bags_at_roastery always sum to bag_count
+  bags_at_warehouse: number
+  bags_at_roastery: number
   total_weight_lbs: number
   initial_weight_lbs: number
   price_per_lb: number | null
@@ -253,6 +256,10 @@ export interface GreenLotTransaction {
   green_lot_id: number
   type: 'received' | 'transferred' | 'roasted' | 'adjustment'
   weight_lbs: number
+  // For 'transferred' type: number of bags moved warehouse ↔ roastery.
+  // Positive = warehouse → roastery. Negative = roastery → warehouse.
+  // null for all other transaction types.
+  bag_count: number | null
   location_from: string | null
   location_to: string | null
   notes: string | null

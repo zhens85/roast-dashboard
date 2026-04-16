@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
       origin_warehouse:   body.origin_warehouse ?? null,
       bag_count,
       bag_weight_lbs,
+      bags_at_warehouse:  body.origin_warehouse ? bag_count : 0,
+      bags_at_roastery:   body.origin_warehouse ? 0 : bag_count,
       total_weight_lbs:   total,
       initial_weight_lbs: total,
       price_per_lb:       body.price_per_lb ?? null,
