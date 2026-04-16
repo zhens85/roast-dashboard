@@ -223,3 +223,57 @@ export interface PackagingTotalLine {
     '5lb': number
   }
 }
+
+// ============================================================
+// Green inventory types
+// ============================================================
+
+export interface GreenLot {
+  id: number
+  lot_number: string
+  name: string
+  origin: string
+  producer: string | null
+  harvest_year: string | null
+  process: string | null
+  location: string
+  origin_warehouse: string | null
+  bag_count: number
+  bag_weight_lbs: number
+  total_weight_lbs: number
+  initial_weight_lbs: number
+  price_per_lb: number | null
+  notes: string | null
+  status: 'active' | 'archived'
+  created_at: string
+}
+
+export interface GreenLotTransaction {
+  id: number
+  green_lot_id: number
+  type: 'received' | 'transferred' | 'roasted' | 'adjustment'
+  weight_lbs: number
+  location_from: string | null
+  location_to: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface BlendRecipeItem {
+  id: number
+  blend_recipe_id: number
+  green_lot_id: number
+  percentage: number
+  green_lots?: Pick<GreenLot, 'id' | 'lot_number' | 'name' | 'origin'>
+}
+
+export interface BlendRecipe {
+  id: number
+  product_id: number
+  version: number
+  is_current: boolean
+  notes: string | null
+  created_at: string
+  blend_recipe_items?: BlendRecipeItem[]
+  products?: Pick<Product, 'id' | 'name'>
+}

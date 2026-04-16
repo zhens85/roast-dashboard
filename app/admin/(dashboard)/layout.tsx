@@ -20,7 +20,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           {/* Nav links */}
           <nav className="flex items-center gap-0.5 flex-1">
             {[
-              { href: '/admin/orders',          label: 'Orders'   },
+              { href: '/admin/orders',   label: 'Orders'   },
+              { href: '/admin/green',    label: 'Green'    },
               { href: '/admin/products', label: 'Products' },
               { href: '/admin/partners', label: 'Partners' },
               { href: '/admin/tiers',    label: 'Tiers'    },
