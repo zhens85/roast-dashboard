@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { PartnerTier, Partner, Product } from '@/types'
+import type { PartnerTier, TierDiscountRule, Partner, Product } from '@/types'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -11,7 +11,22 @@ interface Props {
   initialProducts: Pick<Product, 'id' | 'name' | 'visible_to_tiers'>[]
 }
 
-type DiscountType = 'percentage' | 'amount_per_bag'
+type Size         = '12oz' | '2lb' | '5lb'
+type DiscountType = 'none' | 'percentage' | 'amount_per_bag'
+
+interface RuleState {
+  type:    DiscountType
+  pct:     string
+  dollars: string
+}
+
+const SIZES: Size[] = ['12oz', '2lb', '5lb']
+
+const EMPTY_RULE_STATE: RuleState = { type: 'none', pct: '0', dollars: '0.00' }
+
+function emptyRules(): Record<Size, RuleState> {
+  return { '12oz': { ...EMPTY_RULE_STATE }, '2lb': { ...EMPTY_RULE_STATE }, '5lb': { ...EMPTY_RULE_STATE } }
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -28,13 +43,45 @@ async function apiFetch(url: string, method: string, body?: unknown) {
   return res.json()
 }
 
-function formatDiscount(tier: PartnerTier): string {
-  if (tier.discount_type === 'amount_per_bag' && tier.discount_amount_cents > 0) {
-    return `$${(tier.discount_amount_cents / 100).toFixed(2)} off/bag`
+function formatRules(rules: TierDiscountRule[]): string {
+  if (!rules || rules.length === 0) return 'No discounts'
+  return rules
+    .map((r) => {
+      if (r.discount_type === 'amount_per_bag') {
+        return `${r.size}: $${(r.discount_amount_cents / 100).toFixed(2)}/bag`
+      }
+      return `${r.size}: ${Number(r.discount_pct)}% off`
+    })
+    .join(' · ')
+}
+
+function rulesToState(rules: TierDiscountRule[]): Record<Size, RuleState> {
+  const state = emptyRules()
+  for (const rule of rules ?? []) {
+    const size = rule.size as Size
+    if (!SIZES.includes(size)) continue
+    state[size] = {
+      type:    rule.discount_type,
+      pct:     String(Number(rule.discount_pct)),
+      dollars: (rule.discount_amount_cents / 100).toFixed(2),
+    }
   }
-  return Number(tier.discount_pct) > 0
-    ? `${Number(tier.discount_pct)}% discount`
-    : 'No discount'
+  return state
+}
+
+function stateToRules(editRules: Record<Size, RuleState>): Array<{
+  size: string; discount_type: string; discount_pct: number; discount_amount_cents: number
+}> {
+  return SIZES.flatMap((size) => {
+    const r = editRules[size]
+    if (r.type === 'none') return []
+    return [{
+      size,
+      discount_type:         r.type,
+      discount_pct:          r.type === 'percentage' ? Number(r.pct) : 0,
+      discount_amount_cents: r.type === 'amount_per_bag' ? Math.round(Number(r.dollars) * 100) : 0,
+    }]
+  })
 }
 
 // ── Section 1: Tier CRUD ───────────────────────────────────────────────────────
@@ -46,32 +93,24 @@ function TierSection({
   tiers: PartnerTier[]
   onTiersChange: (tiers: PartnerTier[]) => void
 }) {
-  const [name, setName]                             = useState('')
-  const [discountType, setDiscountType]             = useState<DiscountType>('percentage')
-  const [discountPct, setDiscountPct]               = useState('0')
-  const [discountAmountDollars, setDiscountAmountDollars] = useState('0.00')
-  const [editingId, setEditingId]                   = useState<number | null>(null)
-  const [editName, setEditName]                     = useState('')
-  const [editDiscountType, setEditDiscountType]     = useState<DiscountType>('percentage')
-  const [editDiscount, setEditDiscount]             = useState('')
-  const [editDiscountAmount, setEditDiscountAmount] = useState('0.00')
-  const [saving, setSaving]                         = useState(false)
-  const [error, setError]                           = useState<string | null>(null)
+  const [name, setName]           = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editName, setEditName]   = useState('')
+  const [editRules, setEditRules] = useState<Record<Size, RuleState>>(emptyRules())
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+
+  function updateRule(size: Size, field: keyof RuleState, value: string) {
+    setEditRules((prev) => ({ ...prev, [size]: { ...prev[size], [field]: value } }))
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError(null)
     try {
-      const created = await apiFetch('/api/tiers', 'POST', {
-        name,
-        discount_type:         discountType,
-        discount_pct:          discountType === 'percentage' ? Number(discountPct) : 0,
-        discount_amount_cents: discountType === 'amount_per_bag'
-          ? Math.round(Number(discountAmountDollars) * 100)
-          : 0,
-      })
+      const created = await apiFetch('/api/tiers', 'POST', { name })
       onTiersChange([...tiers, created].sort((a, b) => a.name.localeCompare(b.name)))
-      setName(''); setDiscountType('percentage'); setDiscountPct('0'); setDiscountAmountDollars('0.00')
+      setName('')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -82,23 +121,22 @@ function TierSection({
   function startEdit(tier: PartnerTier) {
     setEditingId(tier.id)
     setEditName(tier.name)
-    setEditDiscountType(tier.discount_type ?? 'percentage')
-    setEditDiscount(String(Number(tier.discount_pct)))
-    setEditDiscountAmount(((tier.discount_amount_cents ?? 0) / 100).toFixed(2))
+    setEditRules(rulesToState(tier.tier_discount_rules ?? []))
+    setError(null)
   }
 
   async function handleSaveEdit(tierId: number) {
     setSaving(true); setError(null)
     try {
-      const updated = await apiFetch(`/api/tiers/${tierId}`, 'PATCH', {
-        name:                  editName.trim(),
-        discount_type:         editDiscountType,
-        discount_pct:          editDiscountType === 'percentage' ? Number(editDiscount) : 0,
-        discount_amount_cents: editDiscountType === 'amount_per_bag'
-          ? Math.round(Number(editDiscountAmount) * 100)
-          : 0,
-      })
-      onTiersChange(tiers.map((t) => (t.id === tierId ? updated : t)))
+      const [updatedTier, updatedRules] = await Promise.all([
+        apiFetch(`/api/tiers/${tierId}`, 'PATCH', { name: editName.trim() }),
+        apiFetch(`/api/tiers/${tierId}/discount-rules`, 'PUT', { rules: stateToRules(editRules) }),
+      ])
+      onTiersChange(
+        tiers.map((t) =>
+          t.id === tierId ? { ...updatedTier, tier_discount_rules: updatedRules } : t
+        )
+      )
       setEditingId(null)
     } catch (err) {
       setError((err as Error).message)
@@ -129,62 +167,24 @@ function TierSection({
       {/* Existing tiers */}
       {tiers.length > 0 && (
         <div className="divide-y divide-stone-100">
-          {tiers.map((tier) => (
-            <div key={tier.id} className="px-5 py-3 flex items-center gap-3">
-              {editingId === tier.id ? (
-                <>
+          {tiers.map((tier) =>
+            editingId === tier.id ? (
+              /* ── Edit mode ── */
+              <div key={tier.id} className="px-5 py-4 space-y-4 bg-stone-50">
+                {/* Name + actions */}
+                <div className="flex items-center gap-3">
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm
-                               focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    className="flex-1 border border-stone-300 rounded-lg px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-amber-400"
                   />
-                  {/* Discount type toggle */}
-                  <select
-                    value={editDiscountType}
-                    onChange={(e) => setEditDiscountType(e.target.value as DiscountType)}
-                    className="border border-stone-300 rounded px-2 py-1 text-sm
-                               focus:outline-none focus:ring-1 focus:ring-amber-400"
-                  >
-                    <option value="percentage">% off</option>
-                    <option value="amount_per_bag">$ off/bag</option>
-                  </select>
-                  {/* Discount value */}
-                  {editDiscountType === 'percentage' ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="0"
-                        max="99.99"
-                        step="0.01"
-                        value={editDiscount}
-                        onChange={(e) => setEditDiscount(e.target.value)}
-                        className="w-16 border border-stone-300 rounded px-2 py-1 text-sm text-center
-                                   focus:outline-none focus:ring-1 focus:ring-amber-400"
-                      />
-                      <span className="text-stone-500 text-sm">%</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="text-stone-500 text-sm">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editDiscountAmount}
-                        onChange={(e) => setEditDiscountAmount(e.target.value)}
-                        className="w-20 border border-stone-300 rounded px-2 py-1 text-sm text-center
-                                   focus:outline-none focus:ring-1 focus:ring-amber-400"
-                      />
-                      <span className="text-stone-500 text-sm">/bag</span>
-                    </div>
-                  )}
                   <button
                     onClick={() => handleSaveEdit(tier.id)}
-                    disabled={saving}
-                    className="text-sm font-medium text-amber-700 hover:text-amber-900 disabled:opacity-50"
+                    disabled={saving || !editName.trim()}
+                    className="text-sm font-medium text-amber-700 hover:text-amber-900 disabled:opacity-50 whitespace-nowrap"
                   >
-                    Save
+                    {saving ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
@@ -192,95 +192,117 @@ function TierSection({
                   >
                     Cancel
                   </button>
-                </>
-              ) : (
-                <>
-                  <span className="flex-1 font-medium text-stone-800">{tier.name}</span>
-                  <span className="text-stone-500 text-sm">{formatDiscount(tier)}</span>
-                  <button
-                    onClick={() => startEdit(tier)}
-                    className="text-xs text-stone-400 hover:text-stone-700 underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(tier.id, tier.name)}
-                    disabled={saving}
-                    className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50"
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-            </div>
-          ))}
+                </div>
+
+                {/* Per-size discount rules */}
+                <div>
+                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
+                    Discounts by Size
+                  </p>
+                  <div className="border border-stone-200 rounded-lg overflow-hidden bg-white">
+                    {SIZES.map((size, i) => (
+                      <div
+                        key={size}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${i < SIZES.length - 1 ? 'border-b border-stone-100' : ''}`}
+                      >
+                        <span className="w-10 text-sm font-semibold text-stone-600 flex-shrink-0">
+                          {size}
+                        </span>
+                        <select
+                          value={editRules[size].type}
+                          onChange={(e) => updateRule(size, 'type', e.target.value)}
+                          className="border border-stone-300 rounded px-2 py-1 text-sm
+                                     focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        >
+                          <option value="none">No discount</option>
+                          <option value="percentage">% off</option>
+                          <option value="amount_per_bag">$ off / bag</option>
+                        </select>
+
+                        {editRules[size].type === 'percentage' && (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number" min="0" max="99.99" step="0.01"
+                              value={editRules[size].pct}
+                              onChange={(e) => updateRule(size, 'pct', e.target.value)}
+                              className="w-16 border border-stone-300 rounded px-2 py-1 text-sm text-center
+                                         focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
+                            <span className="text-stone-500 text-sm">%</span>
+                          </div>
+                        )}
+
+                        {editRules[size].type === 'amount_per_bag' && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-stone-500 text-sm">$</span>
+                            <input
+                              type="number" min="0" step="0.01"
+                              value={editRules[size].dollars}
+                              onChange={(e) => updateRule(size, 'dollars', e.target.value)}
+                              className="w-20 border border-stone-300 rounded px-2 py-1 text-sm text-center
+                                         focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
+                            <span className="text-stone-500 text-sm">/ bag</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {error && <p className="text-red-600 text-sm">{error}</p>}
+              </div>
+            ) : (
+              /* ── Display mode ── */
+              <div key={tier.id} className="px-5 py-3 flex items-center gap-3">
+                <span className="flex-1 font-medium text-stone-800">{tier.name}</span>
+                <span className="text-stone-500 text-sm">
+                  {formatRules(tier.tier_discount_rules ?? [])}
+                </span>
+                <button
+                  onClick={() => startEdit(tier)}
+                  className="text-xs text-stone-400 hover:text-stone-700 underline"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(tier.id, tier.name)}
+                  disabled={saving}
+                  className="text-xs text-red-400 hover:text-red-600 underline disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              </div>
+            )
+          )}
         </div>
       )}
 
       {/* Create new tier */}
       <form onSubmit={handleCreate} className="px-5 py-4 bg-stone-50 border-t border-stone-100">
         <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Add Tier</p>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2">
           <input
             type="text"
             placeholder="Tier name (e.g. Premium)"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="flex-1 min-w-40 border border-stone-300 rounded-lg px-3 py-2 text-sm
+            className="flex-1 border border-stone-300 rounded-lg px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-          {/* Discount type */}
-          <select
-            value={discountType}
-            onChange={(e) => setDiscountType(e.target.value as DiscountType)}
-            className="border border-stone-300 rounded-lg px-3 py-2 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-amber-400"
-          >
-            <option value="percentage">% off</option>
-            <option value="amount_per_bag">$ off/bag</option>
-          </select>
-          {/* Discount value */}
-          {discountType === 'percentage' ? (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min="0"
-                max="99.99"
-                step="0.01"
-                placeholder="0"
-                value={discountPct}
-                onChange={(e) => setDiscountPct(e.target.value)}
-                className="w-20 border border-stone-300 rounded-lg px-3 py-2 text-sm text-center
-                           focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              <span className="text-stone-500 text-sm">% off</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className="text-stone-500 text-sm">$</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={discountAmountDollars}
-                onChange={(e) => setDiscountAmountDollars(e.target.value)}
-                className="w-20 border border-stone-300 rounded-lg px-3 py-2 text-sm text-center
-                           focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              <span className="text-stone-500 text-sm">off/bag</span>
-            </div>
-          )}
           <button
             type="submit"
             disabled={saving || !name.trim()}
             className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white
-                       font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+                       font-semibold px-4 py-2 rounded-lg text-sm transition-colors whitespace-nowrap"
           >
             Add Tier
           </button>
         </div>
+        <p className="text-xs text-stone-400 mt-2">
+          Set per-size discounts by clicking Edit after creating the tier.
+        </p>
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
       </form>
     </section>
@@ -350,7 +372,10 @@ function PartnerSection({
                 <option value="">No tier</option>
                 {tiers.map((tier) => (
                   <option key={tier.id} value={tier.id}>
-                    {tier.name} ({formatDiscount(tier)})
+                    {tier.name}
+                    {(tier.tier_discount_rules?.length ?? 0) > 0
+                      ? ` (${formatRules(tier.tier_discount_rules!)})`
+                      : ' (no discounts)'}
                   </option>
                 ))}
               </select>
@@ -391,20 +416,12 @@ function ProductVisibilitySection({
     const updated = checked
       ? [...new Set([...current, tierId])]
       : current.filter((id) => id !== tierId)
-
-    // Empty array → null (visible to all)
     const newValue = updated.length === 0 ? null : updated
 
     setSavingId(product.id); setError(null)
     try {
-      await apiFetch(`/api/products/${product.id}/tiers`, 'PATCH', {
-        visible_to_tiers: newValue,
-      })
-      onProductsChange(
-        products.map((p) =>
-          p.id === product.id ? { ...p, visible_to_tiers: newValue } : p
-        )
-      )
+      await apiFetch(`/api/products/${product.id}/tiers`, 'PATCH', { visible_to_tiers: newValue })
+      onProductsChange(products.map((p) => p.id === product.id ? { ...p, visible_to_tiers: newValue } : p))
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -441,9 +458,7 @@ function ProductVisibilitySection({
                   Restricted to:
                 </th>
                 {tiers.map((tier) => (
-                  <th key={tier.id} className="px-3 py-3 text-center">
-                    {tier.name}
-                  </th>
+                  <th key={tier.id} className="px-3 py-3 text-center">{tier.name}</th>
                 ))}
               </tr>
             </thead>
@@ -451,16 +466,11 @@ function ProductVisibilitySection({
               {products.map((product) => {
                 const restricted = product.visible_to_tiers && product.visible_to_tiers.length > 0
                 return (
-                  <tr
-                    key={product.id}
-                    className={`hover:bg-stone-50 ${savingId === product.id ? 'opacity-60' : ''}`}
-                  >
+                  <tr key={product.id} className={`hover:bg-stone-50 ${savingId === product.id ? 'opacity-60' : ''}`}>
                     <td className="px-5 py-3 font-medium text-stone-800">{product.name}</td>
                     <td className="px-3 py-3 text-center">
                       {restricted ? (
-                        <span className="text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">
-                          Restricted
-                        </span>
+                        <span className="text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5">Restricted</span>
                       ) : (
                         <span className="text-xs text-stone-400">All</span>
                       )}
@@ -502,20 +512,9 @@ export default function TiersClient({ initialTiers, initialPartners, initialProd
 
   return (
     <div className="space-y-6 pb-10">
-      <TierSection
-        tiers={tiers}
-        onTiersChange={setTiers}
-      />
-      <PartnerSection
-        partners={partners}
-        tiers={tiers}
-        onPartnersChange={setPartners}
-      />
-      <ProductVisibilitySection
-        products={products}
-        tiers={tiers}
-        onProductsChange={setProducts}
-      />
+      <TierSection tiers={tiers} onTiersChange={setTiers} />
+      <PartnerSection partners={partners} tiers={tiers} onPartnersChange={setPartners} />
+      <ProductVisibilitySection products={products} tiers={tiers} onProductsChange={setProducts} />
     </div>
   )
 }

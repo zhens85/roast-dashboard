@@ -2,15 +2,22 @@
 // Database types — mirror the Supabase schema exactly (snake_case)
 // ============================================================
 
+export interface TierDiscountRule {
+  id: number
+  tier_id: number
+  size: '12oz' | '2lb' | '5lb'
+  discount_type: 'percentage' | 'amount_per_bag'
+  // IMPORTANT: Postgres NUMERIC arrives as a string in JSON.
+  // Always cast with Number(rule.discount_pct) before arithmetic.
+  discount_pct: number
+  discount_amount_cents: number
+}
+
 export interface PartnerTier {
   id: number
   name: string
-  // IMPORTANT: Postgres NUMERIC arrives as a string in JSON.
-  // Always cast with Number(tier.discount_pct) before arithmetic.
-  discount_pct: number
-  discount_type: 'percentage' | 'amount_per_bag'
-  discount_amount_cents: number
   created_at: string
+  tier_discount_rules?: TierDiscountRule[]  // embedded when joined with tier_discount_rules(*)
 }
 
 export interface Partner {

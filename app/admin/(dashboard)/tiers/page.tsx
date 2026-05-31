@@ -14,12 +14,12 @@ async function fetchTiersData(): Promise<{
   const [tiersRes, partnersRes, productsRes] = await Promise.all([
     supabase
       .from('partner_tiers')
-      .select('*')
+      .select('*, tier_discount_rules(*)')
       .order('name', { ascending: true }),
 
     supabase
       .from('partners')
-      .select('*, partner_tiers(*)')
+      .select('*, partner_tiers(*, tier_discount_rules(*))')
       .order('company_name', { ascending: true }),
 
     supabase

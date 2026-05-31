@@ -1,15 +1,32 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { PortalProduct, ProductVariant, CartItem } from '@/types'
+import type { PortalProduct, ProductVariant, CartItem, TierDiscountRule } from '@/types'
 
 const CART_KEY = 'coffee_cart'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function discountedPrice(priceCents: number, discountPct: number): number {
-  if (discountPct <= 0) return priceCents
-  return Math.floor(priceCents * (1 - discountPct / 100))
+function discountedPrice(priceCents: number, rule?: TierDiscountRule): number {
+  if (!rule) return priceCents
+  if (rule.discount_type === 'amount_per_bag' && rule.discount_amount_cents > 0) {
+    return Math.max(0, priceCents - rule.discount_amount_cents)
+  }
+  if (rule.discount_type === 'percentage' && Number(rule.discount_pct) > 0) {
+    return Math.floor(priceCents * (1 - Number(rule.discount_pct) / 100))
+  }
+  return priceCents
+}
+
+function discountLabel(rule?: TierDiscountRule): string | null {
+  if (!rule) return null
+  if (rule.discount_type === 'amount_per_bag' && rule.discount_amount_cents > 0) {
+    return `$${(rule.discount_amount_cents / 100).toFixed(2)} off`
+  }
+  if (rule.discount_type === 'percentage' && Number(rule.discount_pct) > 0) {
+    return `${Number(rule.discount_pct)}% off`
+  }
+  return null
 }
 
 function fmtPrice(cents: number): string {
@@ -39,13 +56,13 @@ const ROAST_LABELS: Record<string, string> = {
 // ── ProductCard ───────────────────────────────────────────────────────────────
 
 interface ProductCardProps {
-  product: PortalProduct
-  discountPct: number
-  onAddToCart: (item: CartItem) => void
-  cartCounts: Record<number, number>
+  product:      PortalProduct
+  ruleBySize:   Partial<Record<'12oz' | '2lb' | '5lb', TierDiscountRule>>
+  onAddToCart:  (item: CartItem) => void
+  cartCounts:   Record<number, number>
 }
 
-function ProductCard({ product, discountPct, onAddToCart, cartCounts }: ProductCardProps) {
+function ProductCard({ product, ruleBySize, onAddToCart, cartCounts }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.product_variants.find((v) => v.is_available) ?? null
   )
@@ -60,11 +77,10 @@ function ProductCard({ product, discountPct, onAddToCart, cartCounts }: ProductC
 
   if (availableVariants.length === 0) return null
 
-  const effectivePrice = selectedVariant
-    ? discountedPrice(selectedVariant.price_cents, discountPct)
-    : 0
-
-  const inCartQty = selectedVariant ? (cartCounts[selectedVariant.id] ?? 0) : 0
+  const selectedRule   = selectedVariant ? ruleBySize[selectedVariant.size as '12oz' | '2lb' | '5lb'] : undefined
+  const effectivePrice = selectedVariant ? discountedPrice(selectedVariant.price_cents, selectedRule) : 0
+  const activeLabel    = discountLabel(selectedRule)
+  const inCartQty      = selectedVariant ? (cartCounts[selectedVariant.id] ?? 0) : 0
 
   function handleAdd() {
     if (!selectedVariant) return
@@ -84,7 +100,6 @@ function ProductCard({ product, discountPct, onAddToCart, cartCounts }: ProductC
                     hover:shadow-md transition-all"
          style={{ borderColor: '#e5e5e5' }}>
 
-      {/* Card body */}
       <div className="p-5 flex flex-col gap-4 flex-1">
         {/* Product info */}
         <div>
@@ -112,32 +127,41 @@ function ProductCard({ product, discountPct, onAddToCart, cartCounts }: ProductC
           )}
         </div>
 
-        {/* Size selector */}
+        {/* Size selector — shows a discount badge per size when applicable */}
         <div>
           <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: '#999' }}>
             Size
           </p>
           <div className="flex gap-2 flex-wrap">
-            {availableVariants.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => { setSelectedVariant(v); setQty(1) }}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all"
-                style={selectedVariant?.id === v.id
-                  ? { borderColor: '#466c7e', backgroundColor: '#f0f4f5', color: '#466c7e' }
-                  : { borderColor: '#e5e5e5', backgroundColor: '#fafafa', color: '#555' }
-                }
-              >
-                {v.size}
-              </button>
-            ))}
+            {availableVariants.map((v) => {
+              const rule  = ruleBySize[v.size as '12oz' | '2lb' | '5lb']
+              const label = discountLabel(rule)
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => { setSelectedVariant(v); setQty(1) }}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all flex items-center gap-1"
+                  style={selectedVariant?.id === v.id
+                    ? { borderColor: '#466c7e', backgroundColor: '#f0f4f5', color: '#466c7e' }
+                    : { borderColor: '#e5e5e5', backgroundColor: '#fafafa', color: '#555' }
+                  }
+                >
+                  {v.size}
+                  {label && (
+                    <span className="text-xs font-semibold" style={{ color: '#2d7a4f' }}>
+                      −{label}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Price */}
         {selectedVariant && (
           <div className="flex items-baseline gap-2">
-            {discountPct > 0 && (
+            {activeLabel && (
               <span className="text-sm line-through" style={{ color: '#bbb' }}>
                 {fmtPrice(selectedVariant.price_cents)}
               </span>
@@ -145,10 +169,10 @@ function ProductCard({ product, discountPct, onAddToCart, cartCounts }: ProductC
             <span className="text-xl font-bold" style={{ color: '#3b4858' }}>
               {fmtPrice(effectivePrice)}
             </span>
-            {discountPct > 0 && (
+            {activeLabel && (
               <span className="text-xs font-medium rounded-full px-2 py-0.5"
                     style={{ backgroundColor: '#eaf4ef', color: '#2d7a4f' }}>
-                {discountPct}% off
+                {activeLabel}
               </span>
             )}
           </div>
@@ -211,17 +235,22 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 // ── ProductGrid (main export) ─────────────────────────────────────────────────
 
 interface ProductGridProps {
-  products: PortalProduct[]
-  discountPct: number
+  products:      PortalProduct[]
+  discountRules: TierDiscountRule[]
 }
 
-export default function ProductGrid({ products, discountPct }: ProductGridProps) {
-  const [cart, setCart] = useState<CartItem[]>([])
+export default function ProductGrid({ products, discountRules }: ProductGridProps) {
+  const [cart, setCart]   = useState<CartItem[]>([])
   const [toast, setToast] = useState({ visible: false, message: '' })
 
   useEffect(() => {
     setCart(loadCart())
   }, [])
+
+  // Build a size → rule lookup for fast per-card access
+  const ruleBySize = Object.fromEntries(
+    discountRules.map((r) => [r.size, r])
+  ) as Partial<Record<'12oz' | '2lb' | '5lb', TierDiscountRule>>
 
   const cartCounts: Record<number, number> = {}
   for (const item of cart) {
@@ -240,9 +269,7 @@ export default function ProductGrid({ products, discountPct }: ProductGridProps)
       let updated: CartItem[]
       if (existing >= 0) {
         updated = prev.map((item, i) =>
-          i === existing
-            ? { ...item, quantity: item.quantity + newItem.quantity }
-            : item
+          i === existing ? { ...item, quantity: item.quantity + newItem.quantity } : item
         )
       } else {
         updated = [...prev, newItem]
@@ -255,7 +282,6 @@ export default function ProductGrid({ products, discountPct }: ProductGridProps)
 
   return (
     <>
-      {/* Floating cart button */}
       {totalCartItems > 0 && (
         <div className="fixed bottom-6 right-6 z-10">
           <a
@@ -275,13 +301,12 @@ export default function ProductGrid({ products, discountPct }: ProductGridProps)
         </div>
       )}
 
-      {/* Product grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((product) => (
           <ProductCard
             key={product.id}
             product={product}
-            discountPct={discountPct}
+            ruleBySize={ruleBySize}
             onAddToCart={handleAddToCart}
             cartCounts={cartCounts}
           />
