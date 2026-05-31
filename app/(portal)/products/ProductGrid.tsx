@@ -63,9 +63,15 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, ruleBySize, onAddToCart, cartCounts }: ProductCardProps) {
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    product.product_variants.find((v) => v.is_available) ?? null
-  )
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(() => {
+    const available = product.product_variants.filter((v) => v.is_available)
+    return (
+      available.find((v) => v.size === '5lb') ??
+      available.find((v) => v.size === '2lb') ??
+      available[0] ??
+      null
+    )
+  })
   const [qty, setQty] = useState(1)
 
   const availableVariants = product.product_variants
