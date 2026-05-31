@@ -8,6 +8,8 @@ export interface PartnerTier {
   // IMPORTANT: Postgres NUMERIC arrives as a string in JSON.
   // Always cast with Number(tier.discount_pct) before arithmetic.
   discount_pct: number
+  discount_type: 'percentage' | 'amount_per_bag'
+  discount_amount_cents: number
   created_at: string
 }
 
@@ -70,6 +72,8 @@ export interface Order {
   status:             'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   total_amount_cents: number
   notes:              string | null
+  is_recurring:       boolean
+  recurring_interval: 'weekly' | 'biweekly' | 'monthly' | 'every_6_weeks' | 'every_8_weeks' | null
   // 'portal' = placed via the wholesale ordering portal
   // 'shopify' = imported from the Shopify store via webhook
   source:             'portal' | 'shopify'

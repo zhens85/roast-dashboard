@@ -5,6 +5,16 @@ import type { CartItem } from '@/types'
 
 const CART_KEY = 'coffee_cart'
 
+const RECURRING_INTERVALS = [
+  { value: 'weekly',        label: 'Weekly' },
+  { value: 'biweekly',      label: 'Every 2 Weeks' },
+  { value: 'monthly',       label: 'Monthly' },
+  { value: 'every_6_weeks', label: 'Every 6 Weeks' },
+  { value: 'every_8_weeks', label: 'Every 8 Weeks' },
+] as const
+
+type RecurringInterval = typeof RECURRING_INTERVALS[number]['value']
+
 function loadCart(): CartItem[] {
   if (typeof window === 'undefined') return []
   try {
@@ -26,11 +36,18 @@ function fmtPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+function intervalLabel(value: RecurringInterval): string {
+  return RECURRING_INTERVALS.find((i) => i.value === value)?.label ?? value
+}
+
 export default function CartView() {
-  const [cart, setCart]       = useState<CartItem[]>([])
-  const [notes, setNotes]     = useState('')
-  const [status, setStatus]   = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
-  const [mounted, setMounted] = useState(false)
+  const [cart, setCart]                     = useState<CartItem[]>([])
+  const [notes, setNotes]                   = useState('')
+  const [isRecurring, setIsRecurring]       = useState(false)
+  const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>('biweekly')
+  const [status, setStatus]                 = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [lastOrder, setLastOrder]           = useState<{ id: number; isRecurring: boolean; interval: RecurringInterval | null } | null>(null)
+  const [mounted, setMounted]               = useState(false)
 
   useEffect(() => {
     setCart(loadCart())
@@ -68,12 +85,19 @@ export default function CartView() {
       const res = await fetch('/api/portal/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart, notes }),
+        body: JSON.stringify({
+          items: cart,
+          notes,
+          is_recurring:       isRecurring,
+          recurring_interval: isRecurring ? recurringInterval : null,
+        }),
       })
       if (!res.ok) throw new Error('API error')
+      const data = await res.json()
       clearCart()
       setCart([])
       setNotes('')
+      setLastOrder({ id: data.orderId, isRecurring: data.is_recurring, interval: data.recurring_interval })
       setStatus('success')
     } catch {
       setStatus('error')
@@ -105,10 +129,15 @@ export default function CartView() {
            style={{ borderColor: '#e5e5e5' }}>
         <div className="text-4xl mb-3">✅</div>
         <h2 className="text-xl font-bold mb-2" style={{ color: '#3b4858' }}>Order Placed!</h2>
-        <p className="mb-6" style={{ color: '#777777' }}>
+        <p style={{ color: '#777777' }}>
           We&apos;ve received your order and will be in touch once it&apos;s confirmed.
         </p>
-        <div className="flex gap-3 justify-center">
+        {lastOrder?.isRecurring && lastOrder.interval && (
+          <p className="mt-2 text-sm font-medium" style={{ color: '#466c7e' }}>
+            🔄 This order will repeat {intervalLabel(lastOrder.interval).toLowerCase()}.
+          </p>
+        )}
+        <div className="flex gap-3 justify-center mt-6">
           <a
             href="/products"
             className="text-white font-semibold px-5 py-2 rounded-lg
@@ -207,6 +236,50 @@ export default function CartView() {
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 resize-none"
           style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
         />
+      </div>
+
+      {/* Recurring order */}
+      <div className="bg-white rounded-xl border px-5 py-4" style={{ borderColor: '#e5e5e5' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium" style={{ color: '#3b4858' }}>Recurring Order</p>
+            <p className="text-sm" style={{ color: '#999' }}>
+              Repeat this order automatically on a schedule
+            </p>
+          </div>
+          {/* Toggle */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isRecurring}
+            onClick={() => setIsRecurring((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${isRecurring ? 'bg-[#466c7e]' : 'bg-gray-200'}`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isRecurring ? 'translate-x-5' : 'translate-x-0.5'}`}
+            />
+          </button>
+        </div>
+
+        {isRecurring && (
+          <div className="mt-4">
+            <label htmlFor="recurringInterval" className="block text-sm font-medium mb-1"
+                   style={{ color: '#3b4858' }}>
+              Frequency
+            </label>
+            <select
+              id="recurringInterval"
+              value={recurringInterval}
+              onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
+            >
+              {RECURRING_INTERVALS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Error */}

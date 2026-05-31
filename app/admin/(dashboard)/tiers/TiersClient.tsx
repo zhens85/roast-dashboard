@@ -11,6 +11,8 @@ interface Props {
   initialProducts: Pick<Product, 'id' | 'name' | 'visible_to_tiers'>[]
 }
 
+type DiscountType = 'percentage' | 'amount_per_bag'
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url: string, method: string, body?: unknown) {
@@ -26,6 +28,15 @@ async function apiFetch(url: string, method: string, body?: unknown) {
   return res.json()
 }
 
+function formatDiscount(tier: PartnerTier): string {
+  if (tier.discount_type === 'amount_per_bag' && tier.discount_amount_cents > 0) {
+    return `$${(tier.discount_amount_cents / 100).toFixed(2)} off/bag`
+  }
+  return Number(tier.discount_pct) > 0
+    ? `${Number(tier.discount_pct)}% discount`
+    : 'No discount'
+}
+
 // ── Section 1: Tier CRUD ───────────────────────────────────────────────────────
 
 function TierSection({
@@ -35,13 +46,17 @@ function TierSection({
   tiers: PartnerTier[]
   onTiersChange: (tiers: PartnerTier[]) => void
 }) {
-  const [name, setName]               = useState('')
-  const [discountPct, setDiscountPct] = useState('0')
-  const [editingId, setEditingId]     = useState<number | null>(null)
-  const [editName, setEditName]       = useState('')
-  const [editDiscount, setEditDiscount] = useState('')
-  const [saving, setSaving]           = useState(false)
-  const [error, setError]             = useState<string | null>(null)
+  const [name, setName]                             = useState('')
+  const [discountType, setDiscountType]             = useState<DiscountType>('percentage')
+  const [discountPct, setDiscountPct]               = useState('0')
+  const [discountAmountDollars, setDiscountAmountDollars] = useState('0.00')
+  const [editingId, setEditingId]                   = useState<number | null>(null)
+  const [editName, setEditName]                     = useState('')
+  const [editDiscountType, setEditDiscountType]     = useState<DiscountType>('percentage')
+  const [editDiscount, setEditDiscount]             = useState('')
+  const [editDiscountAmount, setEditDiscountAmount] = useState('0.00')
+  const [saving, setSaving]                         = useState(false)
+  const [error, setError]                           = useState<string | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -49,10 +64,14 @@ function TierSection({
     try {
       const created = await apiFetch('/api/tiers', 'POST', {
         name,
-        discount_pct: Number(discountPct),
+        discount_type:         discountType,
+        discount_pct:          discountType === 'percentage' ? Number(discountPct) : 0,
+        discount_amount_cents: discountType === 'amount_per_bag'
+          ? Math.round(Number(discountAmountDollars) * 100)
+          : 0,
       })
       onTiersChange([...tiers, created].sort((a, b) => a.name.localeCompare(b.name)))
-      setName(''); setDiscountPct('0')
+      setName(''); setDiscountType('percentage'); setDiscountPct('0'); setDiscountAmountDollars('0.00')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -63,15 +82,21 @@ function TierSection({
   function startEdit(tier: PartnerTier) {
     setEditingId(tier.id)
     setEditName(tier.name)
+    setEditDiscountType(tier.discount_type ?? 'percentage')
     setEditDiscount(String(Number(tier.discount_pct)))
+    setEditDiscountAmount(((tier.discount_amount_cents ?? 0) / 100).toFixed(2))
   }
 
   async function handleSaveEdit(tierId: number) {
     setSaving(true); setError(null)
     try {
       const updated = await apiFetch(`/api/tiers/${tierId}`, 'PATCH', {
-        name:         editName.trim(),
-        discount_pct: Number(editDiscount),
+        name:                  editName.trim(),
+        discount_type:         editDiscountType,
+        discount_pct:          editDiscountType === 'percentage' ? Number(editDiscount) : 0,
+        discount_amount_cents: editDiscountType === 'amount_per_bag'
+          ? Math.round(Number(editDiscountAmount) * 100)
+          : 0,
       })
       onTiersChange(tiers.map((t) => (t.id === tierId ? updated : t)))
       setEditingId(null)
@@ -114,19 +139,46 @@ function TierSection({
                     className="flex-1 border border-stone-300 rounded px-2 py-1 text-sm
                                focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="99.99"
-                      step="0.01"
-                      value={editDiscount}
-                      onChange={(e) => setEditDiscount(e.target.value)}
-                      className="w-20 border border-stone-300 rounded px-2 py-1 text-sm text-center
-                                 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    />
-                    <span className="text-stone-500 text-sm">%</span>
-                  </div>
+                  {/* Discount type toggle */}
+                  <select
+                    value={editDiscountType}
+                    onChange={(e) => setEditDiscountType(e.target.value as DiscountType)}
+                    className="border border-stone-300 rounded px-2 py-1 text-sm
+                               focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  >
+                    <option value="percentage">% off</option>
+                    <option value="amount_per_bag">$ off/bag</option>
+                  </select>
+                  {/* Discount value */}
+                  {editDiscountType === 'percentage' ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="99.99"
+                        step="0.01"
+                        value={editDiscount}
+                        onChange={(e) => setEditDiscount(e.target.value)}
+                        className="w-16 border border-stone-300 rounded px-2 py-1 text-sm text-center
+                                   focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      />
+                      <span className="text-stone-500 text-sm">%</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="text-stone-500 text-sm">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editDiscountAmount}
+                        onChange={(e) => setEditDiscountAmount(e.target.value)}
+                        className="w-20 border border-stone-300 rounded px-2 py-1 text-sm text-center
+                                   focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      />
+                      <span className="text-stone-500 text-sm">/bag</span>
+                    </div>
+                  )}
                   <button
                     onClick={() => handleSaveEdit(tier.id)}
                     disabled={saving}
@@ -144,11 +196,7 @@ function TierSection({
               ) : (
                 <>
                   <span className="flex-1 font-medium text-stone-800">{tier.name}</span>
-                  <span className="text-stone-500 text-sm">
-                    {Number(tier.discount_pct) > 0
-                      ? `${Number(tier.discount_pct)}% discount`
-                      : 'No discount'}
-                  </span>
+                  <span className="text-stone-500 text-sm">{formatDiscount(tier)}</span>
                   <button
                     onClick={() => startEdit(tier)}
                     className="text-xs text-stone-400 hover:text-stone-700 underline"
@@ -182,20 +230,48 @@ function TierSection({
             className="flex-1 min-w-40 border border-stone-300 rounded-lg px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              min="0"
-              max="99.99"
-              step="0.01"
-              placeholder="0"
-              value={discountPct}
-              onChange={(e) => setDiscountPct(e.target.value)}
-              className="w-20 border border-stone-300 rounded-lg px-3 py-2 text-sm text-center
-                         focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-            <span className="text-stone-500 text-sm">% off</span>
-          </div>
+          {/* Discount type */}
+          <select
+            value={discountType}
+            onChange={(e) => setDiscountType(e.target.value as DiscountType)}
+            className="border border-stone-300 rounded-lg px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="percentage">% off</option>
+            <option value="amount_per_bag">$ off/bag</option>
+          </select>
+          {/* Discount value */}
+          {discountType === 'percentage' ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                max="99.99"
+                step="0.01"
+                placeholder="0"
+                value={discountPct}
+                onChange={(e) => setDiscountPct(e.target.value)}
+                className="w-20 border border-stone-300 rounded-lg px-3 py-2 text-sm text-center
+                           focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <span className="text-stone-500 text-sm">% off</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <span className="text-stone-500 text-sm">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={discountAmountDollars}
+                onChange={(e) => setDiscountAmountDollars(e.target.value)}
+                className="w-20 border border-stone-300 rounded-lg px-3 py-2 text-sm text-center
+                           focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+              <span className="text-stone-500 text-sm">off/bag</span>
+            </div>
+          )}
           <button
             type="submit"
             disabled={saving || !name.trim()}
@@ -274,7 +350,7 @@ function PartnerSection({
                 <option value="">No tier</option>
                 {tiers.map((tier) => (
                   <option key={tier.id} value={tier.id}>
-                    {tier.name} ({Number(tier.discount_pct) > 0 ? `${Number(tier.discount_pct)}% off` : 'no discount'})
+                    {tier.name} ({formatDiscount(tier)})
                   </option>
                 ))}
               </select>

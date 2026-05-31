@@ -12,16 +12,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const VALID_INTERVALS = ['weekly', 'biweekly', 'monthly', 'every_6_weeks', 'every_8_weeks']
+
   // Parse request body
   let items: CartItem[]
   let notes: string | null
+  let is_recurring: boolean
+  let recurring_interval: string | null
   try {
     const body = await request.json()
-    items = body.items
-    notes = body.notes || null
+    items              = body.items
+    notes              = body.notes || null
+    is_recurring       = Boolean(body.is_recurring)
+    recurring_interval = is_recurring ? (body.recurring_interval || null) : null
 
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error('items must be a non-empty array')
+    }
+    if (is_recurring && recurring_interval && !VALID_INTERVALS.includes(recurring_interval)) {
+      throw new Error('Invalid recurring_interval')
     }
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
@@ -41,6 +50,8 @@ export async function POST(request: NextRequest) {
       status:              'pending',
       total_amount_cents:  totalAmountCents,
       notes,
+      is_recurring,
+      recurring_interval,
     })
     .select('id')
     .single()
@@ -77,5 +88,5 @@ export async function POST(request: NextRequest) {
     console.error(`Order notification email failed for order ${order.id}:`, err)
   }
 
-  return NextResponse.json({ orderId: order.id }, { status: 201 })
+  return NextResponse.json({ orderId: order.id, is_recurring, recurring_interval }, { status: 201 })
 }

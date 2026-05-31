@@ -24,8 +24,10 @@ export async function PATCH(
   try {
     const body = await request.json()
     updates = {}
-    if (body.name !== undefined)        updates.name        = body.name.trim()
-    if (body.discount_pct !== undefined) updates.discount_pct = Number(body.discount_pct)
+    if (body.name !== undefined)                 updates.name                  = body.name.trim()
+    if (body.discount_pct !== undefined)          updates.discount_pct          = Number(body.discount_pct)
+    if (body.discount_type !== undefined)         updates.discount_type         = body.discount_type
+    if (body.discount_amount_cents !== undefined) updates.discount_amount_cents = Math.round(Number(body.discount_amount_cents))
     if (Object.keys(updates).length === 0) throw new Error('No fields to update')
   } catch (e: unknown) {
     return NextResponse.json({ error: (e as Error).message ?? 'Invalid body' }, { status: 400 })
