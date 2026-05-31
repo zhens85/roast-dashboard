@@ -87,9 +87,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 })
   }
 
-  // Send order notification email — awaited so Vercel doesn't terminate the
-  // function before the email is dispatched. Errors are caught and logged so
-  // a Resend failure never blocks the partner's order confirmation.
+  // Send order notification email only for orders that are ready now.
+  // Future-dated orders are held until their scheduled_for date — no email yet.
+  const todayStr = new Date().toISOString().split('T')[0]
+  const isFutureOrder = scheduled_for && scheduled_for > todayStr
+
+  if (!isFutureOrder)
   try {
     await sendOrderNotificationEmail(order.id)
   } catch (err) {

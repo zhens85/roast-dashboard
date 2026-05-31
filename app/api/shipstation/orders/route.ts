@@ -189,6 +189,8 @@ async function handleExport(request: NextRequest): Promise<NextResponse> {
 
   const supabase = createServerSupabaseClient()
 
+  const today = new Date().toISOString().split('T')[0]  // YYYY-MM-DD
+
   let query = supabase
     .from('orders')
     .select(`
@@ -203,6 +205,8 @@ async function handleExport(request: NextRequest): Promise<NextResponse> {
       )
     `)
     .not('status', 'eq', 'cancelled')
+    // Don't export orders whose scheduled_for date hasn't arrived yet
+    .or(`scheduled_for.is.null,scheduled_for.lte.${today}`)
     .order('created_at', { ascending: false })
 
   if (startDate) {
