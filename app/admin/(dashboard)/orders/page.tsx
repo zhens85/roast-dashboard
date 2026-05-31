@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic'
 async function fetchPendingOrders(): Promise<DashboardOrder[]> {
   const supabase = createServerSupabaseClient()
 
+  const today = new Date().toISOString().split('T')[0]  // YYYY-MM-DD
+
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -21,6 +23,8 @@ async function fetchPendingOrders(): Promise<DashboardOrder[]> {
       )
     `)
     .eq('status', 'pending')
+    // Only surface orders whose scheduled_for date has arrived (or has no scheduled date)
+    .or(`scheduled_for.is.null,scheduled_for.lte.${today}`)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Failed to fetch pending orders: ${error.message}`)
