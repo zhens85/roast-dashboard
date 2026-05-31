@@ -630,7 +630,7 @@ function CreatePartnerForm({
             <option value="">No tier</option>
             {tiers.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}{Number(t.discount_pct) > 0 ? ` (${Number(t.discount_pct)}% off)` : ''}
+                {t.name}{(t.tier_discount_rules?.length ?? 0) > 0 ? ' (discounts)' : ''}
               </option>
             ))}
           </select>
