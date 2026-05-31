@@ -81,6 +81,9 @@ export interface Order {
   notes:              string | null
   is_recurring:       boolean
   recurring_interval: 'weekly' | 'biweekly' | 'monthly' | 'every_6_weeks' | 'every_8_weeks' | null
+  // First (and repeating) ship date for recurring orders. ISO date string YYYY-MM-DD.
+  // null = start immediately / no specific date set.
+  scheduled_for:      string | null
   // 'portal' = placed via the wholesale ordering portal
   // 'shopify' = imported from the Shopify store via webhook
   source:             'portal' | 'shopify'

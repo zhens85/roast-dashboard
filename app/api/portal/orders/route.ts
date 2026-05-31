@@ -19,18 +19,25 @@ export async function POST(request: NextRequest) {
   let notes: string | null
   let is_recurring: boolean
   let recurring_interval: string | null
+  let scheduled_for: string | null
   try {
     const body = await request.json()
     items              = body.items
     notes              = body.notes || null
     is_recurring       = Boolean(body.is_recurring)
     recurring_interval = is_recurring ? (body.recurring_interval || null) : null
+    // scheduled_for: ISO date string YYYY-MM-DD, only meaningful for recurring orders
+    scheduled_for      = is_recurring ? (body.scheduled_for || null) : null
 
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error('items must be a non-empty array')
     }
     if (is_recurring && recurring_interval && !VALID_INTERVALS.includes(recurring_interval)) {
       throw new Error('Invalid recurring_interval')
+    }
+    // Basic date format validation
+    if (scheduled_for && !/^\d{4}-\d{2}-\d{2}$/.test(scheduled_for)) {
+      throw new Error('Invalid scheduled_for date format')
     }
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
@@ -52,6 +59,7 @@ export async function POST(request: NextRequest) {
       notes,
       is_recurring,
       recurring_interval,
+      scheduled_for,
     })
     .select('id')
     .single()
@@ -88,5 +96,5 @@ export async function POST(request: NextRequest) {
     console.error(`Order notification email failed for order ${order.id}:`, err)
   }
 
-  return NextResponse.json({ orderId: order.id, is_recurring, recurring_interval }, { status: 201 })
+  return NextResponse.json({ orderId: order.id, is_recurring, recurring_interval, scheduled_for }, { status: 201 })
 }

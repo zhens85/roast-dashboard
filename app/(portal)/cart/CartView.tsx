@@ -40,18 +40,29 @@ function intervalLabel(value: RecurringInterval): string {
   return RECURRING_INTERVALS.find((i) => i.value === value)?.label ?? value
 }
 
+function todayISO(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+function fmtDate(iso: string): string {
+  // e.g. "2026-06-07" → "Jun 7, 2026"
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export default function CartView() {
-  const [cart, setCart]                     = useState<CartItem[]>([])
-  const [notes, setNotes]                   = useState('')
-  const [isRecurring, setIsRecurring]       = useState(false)
+  const [cart, setCart]                           = useState<CartItem[]>([])
+  const [notes, setNotes]                         = useState('')
+  const [isRecurring, setIsRecurring]             = useState(false)
   const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>('biweekly')
-  const [status, setStatus]                 = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
-  const [lastOrder, setLastOrder]           = useState<{ id: number; isRecurring: boolean; interval: RecurringInterval | null } | null>(null)
-  const [mounted, setMounted]               = useState(false)
+  const [scheduledFor, setScheduledFor]           = useState(todayISO())
+  const [status, setStatus]                       = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [lastOrder, setLastOrder]                 = useState<{ id: number; isRecurring: boolean; interval: RecurringInterval | null; scheduledFor: string | null } | null>(null)
+  const [mounted, setMounted]                     = useState(false)
 
   useEffect(() => {
     setCart(loadCart())
     setMounted(true)
+    setScheduledFor(todayISO())
   }, [])
 
   if (!mounted) {
@@ -90,6 +101,7 @@ export default function CartView() {
           notes,
           is_recurring:       isRecurring,
           recurring_interval: isRecurring ? recurringInterval : null,
+          scheduled_for:      isRecurring ? scheduledFor : null,
         }),
       })
       if (!res.ok) throw new Error('API error')
@@ -97,7 +109,7 @@ export default function CartView() {
       clearCart()
       setCart([])
       setNotes('')
-      setLastOrder({ id: data.orderId, isRecurring: data.is_recurring, interval: data.recurring_interval })
+      setLastOrder({ id: data.orderId, isRecurring: data.is_recurring, interval: data.recurring_interval, scheduledFor: data.scheduled_for })
       setStatus('success')
     } catch {
       setStatus('error')
@@ -134,7 +146,10 @@ export default function CartView() {
         </p>
         {lastOrder?.isRecurring && lastOrder.interval && (
           <p className="mt-2 text-sm font-medium" style={{ color: '#466c7e' }}>
-            🔄 This order will repeat {intervalLabel(lastOrder.interval).toLowerCase()}.
+            🔄 Repeats {intervalLabel(lastOrder.interval).toLowerCase()}
+            {lastOrder.scheduledFor
+              ? `, starting ${fmtDate(lastOrder.scheduledFor)}.`
+              : '.'}
           </p>
         )}
         <div className="flex gap-3 justify-center mt-6">
@@ -262,22 +277,42 @@ export default function CartView() {
         </div>
 
         {isRecurring && (
-          <div className="mt-4">
-            <label htmlFor="recurringInterval" className="block text-sm font-medium mb-1"
-                   style={{ color: '#3b4858' }}>
-              Frequency
-            </label>
-            <select
-              id="recurringInterval"
-              value={recurringInterval}
-              onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
-            >
-              {RECURRING_INTERVALS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label htmlFor="scheduledFor" className="block text-sm font-medium mb-1"
+                     style={{ color: '#3b4858' }}>
+                First shipment date
+              </label>
+              <input
+                id="scheduledFor"
+                type="date"
+                value={scheduledFor}
+                min={todayISO()}
+                onChange={(e) => setScheduledFor(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
+              />
+              <p className="text-xs mt-1" style={{ color: '#999' }}>
+                Set a future date to stagger multiple recurring orders.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="recurringInterval" className="block text-sm font-medium mb-1"
+                     style={{ color: '#3b4858' }}>
+                Frequency
+              </label>
+              <select
+                id="recurringInterval"
+                value={recurringInterval}
+                onChange={(e) => setRecurringInterval(e.target.value as RecurringInterval)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
+              >
+                {RECURRING_INTERVALS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>
