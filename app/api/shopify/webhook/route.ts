@@ -86,6 +86,14 @@ function verifyShopifyHmac(rawBody: string, signature: string, secret: string): 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // ── IMPORTS PAUSED ────────────────────────────────────────────────────────
+  // Shopify order importing is temporarily disabled. Returning 200 so Shopify
+  // does not retry. To re-enable, remove this block.
+  if (process.env.SHOPIFY_IMPORTS_ENABLED !== 'true') {
+    return NextResponse.json({ paused: true }, { status: 200 })
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const secret = process.env.SHOPIFY_WEBHOOK_SECRET
   if (!secret) {
     console.error('[Shopify webhook] SHOPIFY_WEBHOOK_SECRET env var not set')
