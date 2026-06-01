@@ -34,6 +34,13 @@ export default function PortalNav({ companyName }: PortalNavProps) {
           >
             My Orders
           </a>
+          <a
+            href="/account"
+            className="text-sm font-medium px-3 py-1.5 rounded transition-colors hover:bg-gray-50"
+            style={{ color: '#466c7e' }}
+          >
+            Account
+          </a>
 
           {/* Company name + sign out */}
           <div className="flex items-center gap-2 ml-1 pl-3 border-l" style={{ borderColor: '#e5e5e5' }}>

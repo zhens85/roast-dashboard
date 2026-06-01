@@ -26,6 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               { href: '/admin/products',  label: 'Products'  },
               { href: '/admin/partners',  label: 'Partners'  },
               { href: '/admin/tiers',     label: 'Tiers'     },
+              { href: '/admin/settings',  label: 'Settings'  },
             ].map(({ href, label }) => (
               <a
                 key={href}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { createQBOInvoiceForOrder } from '@/lib/quickbooks'
 
 // Advance a YYYY-MM-DD date by the recurring interval.
 function nextOccurrenceDate(dateISO: string, interval: string | null): string {
@@ -114,6 +115,13 @@ export async function POST(request: NextRequest) {
     console.log(
       `Recurring order ${order.id} confirmed → next occurrence created as order ${newOrder.id} ` +
       `(scheduled_for: ${nextDate})`
+    )
+  }
+
+  // Create QBO invoices for all confirmed orders (fire-and-forget — never blocks confirm)
+  for (const id of orderIds) {
+    createQBOInvoiceForOrder(id).catch((err) =>
+      console.error(`[QBO] Invoice failed for order ${id}:`, err)
     )
   }
 

@@ -67,5 +67,7 @@ export const config = {
     '/cart/:path*',
     '/orders',
     '/orders/:path*',
+    '/account',
+    '/account/:path*',
   ],
 }
