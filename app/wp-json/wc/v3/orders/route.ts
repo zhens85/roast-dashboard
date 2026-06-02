@@ -51,8 +51,9 @@ function isAuthorized(request: NextRequest): boolean {
 // ── WooCommerce order mapper ──────────────────────────────────────────────────
 
 function toWCOrder(order: DashboardOrder) {
-  const p = order.partners
-  const [firstName, ...rest] = (p?.contact_person ?? '').split(' ')
+  const p   = order.partners
+  const loc = order.partner_locations ?? null
+  const [firstName, ...rest] = ((loc?.contact_person ?? p?.contact_person) ?? '').split(' ')
   const lastName = rest.join(' ')
 
   return {
@@ -89,11 +90,11 @@ function toWCOrder(order: DashboardOrder) {
     shipping: {
       first_name: firstName,
       last_name:  lastName,
-      company:    p?.company_name  ?? '',
-      address_1:  p?.address       ?? '',
-      city:       p?.city          ?? '',
-      state:      p?.state         ?? '',
-      postcode:   p?.zip_code      ?? '',
+      company:    loc?.name ?? p?.company_name ?? '',
+      address_1:  loc?.address  ?? p?.address  ?? '',
+      city:       loc?.city     ?? p?.city     ?? '',
+      state:      loc?.state    ?? p?.state    ?? '',
+      postcode:   loc?.zip_code ?? p?.zip_code ?? '',
       country:    'US',
     },
 
@@ -156,6 +157,7 @@ export async function GET(request: NextRequest) {
     .select(`
       *,
       partners ( id, company_name, email, contact_person, phone, address, city, state, zip_code ),
+      partner_locations ( id, name, contact_person, phone, address, city, state, zip_code ),
       order_items (
         *,
         product_variants (

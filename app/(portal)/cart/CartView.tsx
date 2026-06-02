@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { CartItem } from '@/types'
+import type { CartItem, PartnerLocation } from '@/types'
 
 const CART_KEY = 'coffee_cart'
 
@@ -49,12 +49,15 @@ function fmtDate(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function CartView() {
+export default function CartView({ initialLocations = [] }: { initialLocations?: PartnerLocation[] }) {
   const [cart, setCart]                           = useState<CartItem[]>([])
   const [notes, setNotes]                         = useState('')
   const [isRecurring, setIsRecurring]             = useState(false)
   const [recurringInterval, setRecurringInterval] = useState<RecurringInterval>('biweekly')
   const [scheduledFor, setScheduledFor]           = useState(todayISO())
+  const [locationId, setLocationId]               = useState<number | null>(
+    initialLocations.find(l => l.is_default)?.id ?? initialLocations[0]?.id ?? null
+  )
   const [status, setStatus]                       = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [lastOrder, setLastOrder]                 = useState<{ id: number; isRecurring: boolean; interval: RecurringInterval | null; scheduledFor: string | null } | null>(null)
   const [mounted, setMounted]                     = useState(false)
@@ -102,6 +105,7 @@ export default function CartView() {
           is_recurring:       isRecurring,
           recurring_interval: isRecurring ? recurringInterval : null,
           scheduled_for:      isRecurring ? scheduledFor : null,
+          location_id:        locationId ?? null,
         }),
       })
       if (!res.ok) throw new Error('API error')
@@ -252,6 +256,37 @@ export default function CartView() {
           style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
         />
       </div>
+
+      {/* Ship to — only shown when partner has locations configured */}
+      {initialLocations.length > 0 && (
+        <div className="bg-white rounded-xl border px-5 py-4" style={{ borderColor: '#e5e5e5' }}>
+          <p className="font-medium mb-3" style={{ color: '#3b4858' }}>Ship to</p>
+          {initialLocations.length === 1 ? (
+            <div className="text-sm" style={{ color: '#555' }}>
+              <p className="font-medium">{initialLocations[0].name}</p>
+              {initialLocations[0].address && (
+                <p style={{ color: '#999' }}>
+                  {[initialLocations[0].address, initialLocations[0].city, initialLocations[0].state].filter(Boolean).join(', ')}
+                </p>
+              )}
+            </div>
+          ) : (
+            <select
+              value={locationId ?? ''}
+              onChange={e => setLocationId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+              style={{ borderColor: '#d0d0d0', color: '#3b4858' }}
+            >
+              <option value="">— Account default address —</option>
+              {initialLocations.map(loc => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}{loc.city ? ` — ${loc.city}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
       {/* Recurring order */}
       <div className="bg-white rounded-xl border px-5 py-4" style={{ borderColor: '#e5e5e5' }}>

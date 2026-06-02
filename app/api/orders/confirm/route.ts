@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     .from('orders')
     .select(`
       id, partner_id, total_amount_cents, notes,
-      is_recurring, recurring_interval, scheduled_for,
+      is_recurring, recurring_interval, scheduled_for, location_id,
       order_items ( product_variant_id, quantity, unit_price_cents )
     `)
     .in('id', orderIds)
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         is_recurring:       true,
         recurring_interval: order.recurring_interval,
         scheduled_for:      nextDate,
+        location_id:        order.location_id ?? null,
       })
       .select('id')
       .single()

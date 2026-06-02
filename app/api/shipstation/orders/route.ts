@@ -102,15 +102,18 @@ function buildOrderXml(order: DashboardOrder): string {
 
   // Resolve display fields — prefer partner account data, fall back to
   // Shopify customer / shipping address fields for unmatched orders.
+  // Location overrides partner address when present
+  const loc = order.partner_locations ?? null
+
   const customerCode  = p?.email        ?? order.customer_email ?? ''
-  const contactName   = p?.contact_person ?? order.customer_name ?? ship?.name ?? ''
+  const contactName   = loc?.contact_person ?? p?.contact_person ?? order.customer_name ?? ship?.name ?? ''
   const companyName   = p?.company_name   ?? ship?.company ?? order.customer_name ?? `Shopify #${order.id}`
-  const phone         = p?.phone          ?? ship?.phone ?? ''
+  const phone         = loc?.phone    ?? p?.phone  ?? ship?.phone ?? ''
   const email         = p?.email          ?? order.customer_email ?? ''
-  const address1      = p?.address        ?? ship?.address1 ?? ''
-  const city          = p?.city           ?? ship?.city ?? ''
-  const state         = p?.state          ?? ship?.province_code ?? ''
-  const zip           = p?.zip_code       ?? ship?.zip ?? ''
+  const address1      = loc?.address  ?? p?.address  ?? ship?.address1 ?? ''
+  const city          = loc?.city     ?? p?.city     ?? ship?.city ?? ''
+  const state         = loc?.state    ?? p?.state    ?? ship?.province_code ?? ''
+  const zip           = loc?.zip_code ?? p?.zip_code ?? ship?.zip ?? ''
   const internalNote  = p
     ? `Good Folks wholesale order #${order.id} — ${p.company_name}`
     : `Shopify order #${order.id} — ${companyName}`
@@ -196,6 +199,7 @@ async function handleExport(request: NextRequest): Promise<NextResponse> {
     .select(`
       *,
       partners (*),
+      partner_locations ( id, name, contact_person, phone, address, city, state, zip_code ),
       order_items (
         *,
         product_variants (

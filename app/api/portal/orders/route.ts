@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
   let is_recurring: boolean
   let recurring_interval: string | null
   let scheduled_for: string | null
+  let location_id: number | null
   try {
     const body = await request.json()
     items              = body.items
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     recurring_interval = is_recurring ? (body.recurring_interval || null) : null
     // scheduled_for: ISO date string YYYY-MM-DD, only meaningful for recurring orders
     scheduled_for      = is_recurring ? (body.scheduled_for || null) : null
+    location_id        = body.location_id ? Number(body.location_id) : null
 
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error('items must be a non-empty array')
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest) {
       is_recurring,
       recurring_interval,
       scheduled_for,
+      location_id,
     })
     .select('id')
     .single()

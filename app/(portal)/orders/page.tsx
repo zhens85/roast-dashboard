@@ -27,7 +27,8 @@ export default async function PortalOrdersPage() {
           *,
           products ( id, name )
         )
-      )
+      ),
+      partner_locations ( id, name, city, state )
     `)
     .eq('partner_id', user.id)
     .order('created_at', { ascending: false })

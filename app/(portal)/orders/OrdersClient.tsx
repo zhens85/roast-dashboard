@@ -482,6 +482,12 @@ export default function OrdersClient({ initialOrders }: { initialOrders: PortalO
                         {paused ? ' · Paused' : ''}
                       </span>
                     )}
+                    {order.partner_locations && (
+                      <span className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: '#f5f5f5', color: '#666' }}>
+                        📍 {order.partner_locations.name}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
                     <p className="font-semibold" style={{ color: '#3b4858' }}>

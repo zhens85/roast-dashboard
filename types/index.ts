@@ -13,6 +13,20 @@ export interface TierDiscountRule {
   discount_amount_cents: number
 }
 
+export interface PartnerLocation {
+  id:             number
+  partner_id:     string
+  name:           string
+  contact_person: string | null
+  phone:          string | null
+  address:        string | null
+  city:           string | null
+  state:          string | null
+  zip_code:       string | null
+  is_default:     boolean
+  created_at:     string
+}
+
 export interface PartnerTier {
   id: number
   name: string
@@ -81,9 +95,8 @@ export interface Order {
   notes:              string | null
   is_recurring:       boolean
   recurring_interval: 'weekly' | 'biweekly' | 'monthly' | 'every_6_weeks' | 'every_8_weeks' | null
-  // First (and repeating) ship date for recurring orders. ISO date string YYYY-MM-DD.
-  // null = start immediately / no specific date set.
   scheduled_for:      string | null
+  location_id:        number | null
   // 'portal' = placed via the wholesale ordering portal
   // 'shopify' = imported from the Shopify store via webhook
   source:             'portal' | 'shopify'
@@ -137,9 +150,9 @@ export interface DashboardOrderItem extends OrderItem {
 }
 
 export interface DashboardOrder extends Order {
-  // null when the order came from Shopify and no partner email match was found
   partners: Partner | null
   order_items: DashboardOrderItem[]
+  partner_locations?: PartnerLocation | null
 }
 
 // ============================================================
@@ -154,6 +167,7 @@ export interface PortalOrderItem extends OrderItem {
 
 export interface PortalOrder extends Order {
   order_items: PortalOrderItem[]
+  partner_locations?: PartnerLocation | null
 }
 
 // ============================================================
