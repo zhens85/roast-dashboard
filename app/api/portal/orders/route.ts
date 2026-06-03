@@ -81,10 +81,9 @@ export async function POST(request: NextRequest) {
     try { await sendOrderNotificationEmail(order.id) }
     catch (err) { console.error(`Order notification email failed for order ${order.id}:`, err) }
 
-    // QuickBooks invoice
-    createQBOInvoiceForOrder(order.id).catch((err) =>
-      console.error(`[QBO] Invoice failed for order ${order.id}:`, err)
-    )
+    // QuickBooks invoice — awaited so Vercel doesn't terminate before it completes
+    try { await createQBOInvoiceForOrder(order.id) }
+    catch (err) { console.error(`[QBO] Invoice failed for order ${order.id}:`, err) }
   }
 
   return NextResponse.json({ orderId: order.id, is_recurring, recurring_interval, scheduled_for }, { status: 201 })

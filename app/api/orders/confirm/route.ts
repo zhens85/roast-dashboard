@@ -121,11 +121,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Create QBO invoices for all confirmed orders (fire-and-forget — never blocks confirm)
+  // Create QBO invoices — awaited so Vercel doesn't terminate before they complete
   for (const id of orderIds) {
-    createQBOInvoiceForOrder(id).catch((err) =>
-      console.error(`[QBO] Invoice failed for order ${id}:`, err)
-    )
+    try { await createQBOInvoiceForOrder(id) }
+    catch (err) { console.error(`[QBO] Invoice failed for order ${id}:`, err) }
   }
 
   return NextResponse.json({ confirmed: orderIds.length })
