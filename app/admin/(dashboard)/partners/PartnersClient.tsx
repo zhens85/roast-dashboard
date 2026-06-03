@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import type { Partner, PartnerTier } from '@/types'
+import { useState, useEffect } from 'react'
+import type { Partner, PartnerTier, PartnerLocation } from '@/types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -391,6 +391,9 @@ function PartnerRow({
             </div>
           )}
 
+          {/* ── Locations ── */}
+          <LocationsPanel partnerId={partner.id} partnerName={partner.company_name} />
+
           {/* ── Change Password ── */}
           <div className="mt-4 pt-4 border-t" style={{ borderColor: '#f0f0f0' }}>
             {!changingPw ? (
@@ -457,6 +460,198 @@ function PartnerRow({
 
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Locations Panel ───────────────────────────────────────────────────────────
+
+const BLANK_LOC = { name: '', contact_person: '', phone: '', address: '', city: '', state: '', zip_code: '', is_default: false }
+
+function LocationsPanel({ partnerId, partnerName }: { partnerId: string; partnerName: string }) {
+  const [locations, setLocations] = useState<PartnerLocation[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [editingId, setEditingId] = useState<number | 'new' | null>(null)
+  const [form, setForm]           = useState({ ...BLANK_LOC })
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/partners/${partnerId}/locations`)
+      .then(r => r.json())
+      .then(data => { setLocations(data); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [partnerId])
+
+  function openNew() {
+    setForm({ ...BLANK_LOC })
+    setEditingId('new')
+    setError(null)
+  }
+
+  function openEdit(loc: PartnerLocation) {
+    setForm({
+      name:           loc.name,
+      contact_person: loc.contact_person ?? '',
+      phone:          loc.phone          ?? '',
+      address:        loc.address        ?? '',
+      city:           loc.city           ?? '',
+      state:          loc.state          ?? '',
+      zip_code:       loc.zip_code       ?? '',
+      is_default:     loc.is_default,
+    })
+    setEditingId(loc.id)
+    setError(null)
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setError('Location name is required'); return }
+    setSaving(true); setError(null)
+    try {
+      const isNew = editingId === 'new'
+      const url   = isNew ? `/api/partners/${partnerId}/locations` : `/api/partners/${partnerId}/locations/${editingId}`
+      const res   = await fetch(url, {
+        method:  isNew ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(form),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
+      const saved: PartnerLocation = await res.json()
+      setLocations(prev => {
+        const without = prev.filter(l => l.id !== saved.id)
+        const updated = form.is_default
+          ? [saved, ...without.map(l => ({ ...l, is_default: false }))]
+          : [...without, saved]
+        return updated.sort((a, b) => Number(b.is_default) - Number(a.is_default) || a.name.localeCompare(b.name))
+      })
+      setEditingId(null)
+    } catch (e) { setError((e as Error).message) }
+    finally { setSaving(false) }
+  }
+
+  async function handleDelete(loc: PartnerLocation) {
+    if (!confirm(`Delete "${loc.name}" for ${partnerName}?`)) return
+    const res = await fetch(`/api/partners/${partnerId}/locations/${loc.id}`, { method: 'DELETE' })
+    if (res.ok) setLocations(prev => prev.filter(l => l.id !== loc.id))
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t" style={{ borderColor: '#f0f0f0' }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#777' }}>
+          Locations {!loading && `(${locations.length})`}
+        </p>
+        {editingId === null && (
+          <button onClick={openNew}
+                  className="text-xs underline hover:opacity-70 transition-opacity"
+                  style={{ color: '#466c7e' }}>
+            + Add location
+          </button>
+        )}
+      </div>
+
+      {loading && <p className="text-xs" style={{ color: '#bbb' }}>Loading…</p>}
+
+      {!loading && locations.length === 0 && editingId === null && (
+        <p className="text-xs" style={{ color: '#bbb' }}>No locations configured.</p>
+      )}
+
+      {locations.map(loc => (
+        editingId === loc.id ? (
+          <LocForm key={loc.id} form={form} setForm={setForm} saving={saving} error={error}
+                   onSave={handleSave} onCancel={() => setEditingId(null)} />
+        ) : (
+          <div key={loc.id} className="flex items-start justify-between py-1.5 border-b text-xs"
+               style={{ borderColor: '#f5f5f5' }}>
+            <div>
+              <span className="font-medium" style={{ color: '#3b4858' }}>{loc.name}</span>
+              {loc.is_default && (
+                <span className="ml-1.5 text-xs px-1 rounded" style={{ background: '#f0f4f5', color: '#466c7e' }}>default</span>
+              )}
+              {(loc.address || loc.city) && (
+                <span className="ml-1.5" style={{ color: '#999' }}>
+                  — {[loc.address, loc.city, loc.state].filter(Boolean).join(', ')}
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 ml-2 flex-shrink-0">
+              <button onClick={() => openEdit(loc)} className="underline hover:opacity-70" style={{ color: '#466c7e' }}>Edit</button>
+              <button onClick={() => handleDelete(loc)} className="underline hover:opacity-70" style={{ color: '#dc2626' }}>Delete</button>
+            </div>
+          </div>
+        )
+      ))}
+
+      {editingId === 'new' && (
+        <LocForm form={form} setForm={setForm} saving={saving} error={error}
+                 onSave={handleSave} onCancel={() => setEditingId(null)} />
+      )}
+    </div>
+  )
+}
+
+type LocFormData = typeof BLANK_LOC
+function LocForm({ form, setForm, saving, error, onSave, onCancel }:
+  { form: LocFormData; setForm: (f: LocFormData) => void; saving: boolean; error: string | null; onSave: () => void; onCancel: () => void }) {
+  const inp = (field: keyof LocFormData) => ({
+    value: form[field] as string,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [field]: e.target.value }),
+    className: inputCls,
+    style: inputStyle,
+  })
+  return (
+    <div className="mt-2 p-3 rounded-lg bg-stone-50 border border-stone-200 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2">
+          <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>Location name *</label>
+          <input {...inp('name')} placeholder="Downtown, East Side…" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>Contact person</label>
+          <input {...inp('contact_person')} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>Phone</label>
+          <input {...inp('phone')} type="tel" />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>Address</label>
+          <input {...inp('address')} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>City</label>
+          <input {...inp('city')} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>State</label>
+            <input {...inp('state')} maxLength={2} placeholder="KY"
+                   className={inputCls + ' uppercase'} style={inputStyle} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-0.5" style={{ color: '#777' }}>ZIP</label>
+            <input {...inp('zip_code')} />
+          </div>
+        </div>
+      </div>
+      <label className="flex items-center gap-1.5 cursor-pointer text-xs" style={{ color: '#555' }}>
+        <input type="checkbox" checked={form.is_default}
+               onChange={e => setForm({ ...form, is_default: e.target.checked })}
+               className="accent-[#466c7e]" />
+        Set as default ship-to for this partner
+      </label>
+      {error && <p className="text-xs" style={{ color: '#dc2626' }}>{error}</p>}
+      <div className="flex gap-2">
+        <button onClick={onSave} disabled={saving}
+                className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: '#466c7e' }}>
+          {saving ? 'Saving…' : 'Save Location'}
+        </button>
+        <button onClick={onCancel}
+                className="text-xs hover:opacity-70" style={{ color: '#777' }}>
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
