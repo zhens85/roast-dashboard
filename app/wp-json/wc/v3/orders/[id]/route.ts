@@ -26,6 +26,10 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 // Inline the mapper here (same as in the list route)
+function wcDate(iso: string): string {
+  return new Date(iso).toISOString().replace(/\.\d{3}Z$/, '').replace('Z', '')
+}
+
 function toWCOrder(order: DashboardOrder) {
   const p   = order.partners
   const loc = order.partner_locations ?? null
@@ -37,7 +41,7 @@ function toWCOrder(order: DashboardOrder) {
     order_key: `wc_order_${order.id}`,
     status: 'processing',
     currency: 'USD',
-    date_created: order.created_at, date_modified: order.created_at,
+    date_created: wcDate(order.created_at), date_modified: wcDate(order.created_at),
     total: (order.total_amount_cents / 100).toFixed(2),
     customer_note: order.notes ?? '',
     billing: {

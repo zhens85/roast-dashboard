@@ -50,6 +50,11 @@ function isAuthorized(request: NextRequest): boolean {
 
 // ── WooCommerce order mapper ──────────────────────────────────────────────────
 
+// WooCommerce expects "YYYY-MM-DDTHH:MM:SS" — no microseconds, no timezone offset.
+function wcDate(iso: string): string {
+  return new Date(iso).toISOString().replace(/\.\d{3}Z$/, '').replace('Z', '')
+}
+
 function toWCOrder(order: DashboardOrder) {
   const p   = order.partners
   const loc = order.partner_locations ?? null
@@ -62,10 +67,10 @@ function toWCOrder(order: DashboardOrder) {
     order_key:        `wc_order_${order.id}`,
     status:           'processing',   // "confirmed" in our system = ready to roast
     currency:         'USD',
-    date_created:     order.created_at,
-    date_modified:    order.created_at,
-    date_created_gmt: order.created_at,
-    date_modified_gmt:order.created_at,
+    date_created:     wcDate(order.created_at),
+    date_modified:    wcDate(order.created_at),
+    date_created_gmt: wcDate(order.created_at),
+    date_modified_gmt:wcDate(order.created_at),
     total:            (order.total_amount_cents / 100).toFixed(2),
     subtotal:         (order.total_amount_cents / 100).toFixed(2),
     total_tax:        '0.00',
