@@ -57,9 +57,10 @@ export async function PATCH(
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
-  if (order.status !== 'pending') {
+  const editableStatuses = ['pending', 'confirmed']
+  if (!editableStatuses.includes(order.status)) {
     return NextResponse.json(
-      { error: 'Only pending orders can be modified' },
+      { error: 'Only unshipped orders can be modified' },
       { status: 400 },
     )
   }
@@ -166,9 +167,9 @@ export async function DELETE(
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
-  if (order.status !== 'pending') {
+  if (!['pending', 'confirmed'].includes(order.status)) {
     return NextResponse.json(
-      { error: 'Only pending orders can be deleted' },
+      { error: 'Only unshipped orders can be deleted' },
       { status: 400 },
     )
   }

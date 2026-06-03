@@ -234,7 +234,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: PortalO
   // ── Shared order card body (used in both schedule and history) ──────────────
 
   function OrderCardBody({ order }: { order: PortalOrder }) {
-    const canManage = order.status === 'pending'
+    const canManage = order.status === 'pending' || order.status === 'confirmed'
     const paused    = order.scheduled_for === PAUSED_DATE
     const isEditing = editingId === order.id
     const isDate    = datePanelId === order.id
@@ -459,7 +459,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: PortalO
           {orders.map((order) => {
             const state     = displayState(order)
             const chip      = CHIP[state] ?? CHIP.pending
-            const canManage = order.status === 'pending'
+            const canManage = order.status === 'pending' || order.status === 'confirmed'
             const paused    = state === 'paused'
 
             return (

@@ -1,3 +1,5 @@
+// NOTE: Orders are now auto-confirmed on placement so this endpoint is largely
+// a no-op for the normal flow. It remains for any manual override needs.
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createQBOInvoiceForOrder } from '@/lib/quickbooks'

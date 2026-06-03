@@ -22,7 +22,7 @@ async function fetchPendingOrders(): Promise<DashboardOrder[]> {
         )
       )
     `)
-    .eq('status', 'pending')
+    .eq('status', 'confirmed')
     // Only surface orders whose scheduled_for date has arrived (or has no scheduled date)
     .or(`scheduled_for.is.null,scheduled_for.lte.${today}`)
     .order('created_at', { ascending: false })
