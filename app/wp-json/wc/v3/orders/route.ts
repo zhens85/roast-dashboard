@@ -65,7 +65,9 @@ function toWCOrder(order: DashboardOrder) {
     id:               order.id,
     number:           String(order.id),
     order_key:        `wc_order_${order.id}`,
-    status:           'processing',   // "confirmed" in our system = ready to roast
+    // pending → on-hold (received, awaiting admin review)
+    // confirmed → processing (admin-confirmed, ready to roast/ship)
+    status:           order.status === 'confirmed' ? 'processing' : 'on-hold',
     currency:         'USD',
     date_created:     wcDate(order.created_at),
     date_modified:    wcDate(order.created_at),
@@ -148,14 +150,18 @@ export async function GET(request: NextRequest) {
   const page     = Math.max(parseInt(searchParams.get('page')     ?? '1',   10), 1)
   const after    = searchParams.get('after')  ?? null  // ISO date string
   const before   = searchParams.get('before') ?? null
-  // WC "processing" = our "confirmed"; ignore other status filters
-  const wcStatus = searchParams.get('status') ?? 'processing'
+  // Accept any WC status request — we export both pending and confirmed orders.
+  // pending   → WC "on-hold"    (placed, not yet admin-confirmed)
+  // confirmed → WC "processing" (admin-confirmed, ready to roast/ship)
+  const wcStatus = searchParams.get('status') ?? 'any'
 
-  // Only export confirmed portal orders (ignore any non-processing requests)
-  if (wcStatus !== 'processing' && wcStatus !== 'any') {
-    return NextResponse.json([])
-  }
+  // Determine which of our statuses to include
+  let statusFilter: string[]
+  if (wcStatus === 'on-hold')     statusFilter = ['pending']
+  else if (wcStatus === 'processing') statusFilter = ['confirmed']
+  else                            statusFilter = ['pending', 'confirmed']
 
+  const today = new Date().toISOString().split('T')[0]
   const supabase = createServerSupabaseClient()
 
   let query = supabase
@@ -172,8 +178,10 @@ export async function GET(request: NextRequest) {
         )
       )
     `)
-    .eq('status', 'confirmed')
+    .in('status', statusFilter)
     .eq('source', 'portal')
+    // Respect scheduled_for — future-dated and paused orders stay hidden
+    .or(`scheduled_for.is.null,scheduled_for.lte.${today}`)
     .order('created_at', { ascending: false })
     .range((page - 1) * perPage, page * perPage - 1)
 
