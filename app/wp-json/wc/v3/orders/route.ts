@@ -110,9 +110,9 @@ function toWCOrder(order: DashboardOrder) {
       return {
         id:           item.id,
         name,
-        // Use variant.id to match the products endpoint (which returns variants as products)
-        product_id:   variant.id,
-        variation_id: 0,
+        // product_id = parent product, variation_id = specific variant (size)
+        product_id:   variant.products.id,
+        variation_id: variant.id,
         quantity:     item.quantity,
         sku:          variant.sku,
         price:        (item.unit_price_cents / 100).toFixed(2),

@@ -20,8 +20,9 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 // GET /wp-json/wc/v3/products
-// Returns active product variants as WooCommerce simple products.
-// Cropster uses this to link SKUs to roast profiles.
+// Returns active products as WooCommerce "variable" products.
+// Each variant (12oz, 2lb, 5lb) is a variation under the parent product.
+// Cropster uses this to link products to roast profiles via SKU.
 export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json(
@@ -32,10 +33,10 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServerSupabaseClient()
   const { data, error } = await supabase
-    .from('product_variants')
-    .select('id, sku, size, price_cents, is_available, products(id, name)')
-    .eq('is_available', true)
-    .order('sku')
+    .from('products')
+    .select('id, name, product_variants(id, sku, size, price_cents, is_available)')
+    .eq('is_active', true)
+    .order('name')
 
   if (error) {
     return NextResponse.json(
@@ -44,22 +45,30 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const products = (data ?? []).map((v) => {
-    const product = v.products as unknown as { id: number; name: string } | null
+  type Variant = { id: number; sku: string; size: string; price_cents: number; is_available: boolean }
+  const products = (data ?? []).map((p) => {
+    const variants = (p.product_variants as Variant[]).filter(v => v.is_available)
     return {
-      id:          v.id,
-      name:        product ? `${product.name} ${v.size}` : v.sku,
-      slug:        v.sku.toLowerCase(),
-      sku:         v.sku,
-      type:        'simple',
+      id:          p.id,
+      name:        p.name,
+      slug:        p.name.toLowerCase().replace(/\s+/g, '-'),
+      type:        'variable',
       status:      'publish',
-      price:       (v.price_cents / 100).toFixed(2),
-      regular_price: (v.price_cents / 100).toFixed(2),
-      sale_price:  '',
-      on_sale:     false,
+      sku:         '',
+      price:       '',
+      regular_price: '',
       purchasable: true,
-      variations:  [],
-      meta_data:   [],
+      variations:  variants.map(v => v.id),
+      attributes: [
+        {
+          id:        1,
+          name:      'Size',
+          variation: true,
+          visible:   true,
+          options:   variants.map(v => v.size),
+        },
+      ],
+      meta_data: [],
     }
   })
 
