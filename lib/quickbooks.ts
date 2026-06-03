@@ -285,17 +285,32 @@ export async function createQBOInvoiceForOrder(orderId: number): Promise<void> {
       partner!.email,
     )
 
-    // Build line items — one per order item
-    const lines = (order.order_items as unknown as OrderForInvoice['order_items']).map((item) => ({
-      Amount:     item.unit_price_cents * item.quantity / 100,
+    // Build line items — correct qty/rate per bag
+    const items = order.order_items as unknown as OrderForInvoice['order_items']
+    const lines = items.map((item) => ({
+      Amount:      item.unit_price_cents * item.quantity / 100,
       DetailType: 'SalesItemLineDetail',
-      Description: `${item.quantity}× ${item.product_variants.products.name} ${item.product_variants.size}`,
+      Description: `${item.product_variants.products.name} ${item.product_variants.size}`,
       SalesItemLineDetail: {
-        ItemRef:    { value: '1', name: 'Services' },
-        Qty:        1,
-        UnitPrice:  item.unit_price_cents * item.quantity / 100,
+        ItemRef:   { value: '1', name: 'Services' },
+        Qty:       item.quantity,
+        UnitPrice: item.unit_price_cents / 100,
       },
     }))
+
+    // Shipping: $20 flat rate on orders under $450, free on $450+
+    const subtotal = items.reduce((s, i) => s + i.unit_price_cents * i.quantity, 0) / 100
+    const shippingRate = subtotal < 450 ? 20 : 0
+    lines.push({
+      Amount:      shippingRate,
+      DetailType: 'SalesItemLineDetail',
+      Description: shippingRate > 0 ? 'Shipping & Handling' : 'Shipping & Handling (Free)',
+      SalesItemLineDetail: {
+        ItemRef:   { value: '1', name: 'Services' },
+        Qty:       1,
+        UnitPrice: shippingRate,
+      },
+    })
 
     const txnDate = new Date(order.created_at).toISOString().split('T')[0]
     const dueDate = (() => {
