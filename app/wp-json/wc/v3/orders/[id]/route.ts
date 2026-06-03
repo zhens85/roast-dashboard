@@ -65,7 +65,7 @@ function toWCOrder(order: DashboardOrder) {
       return {
         id: item.id,
         name: `${v.products.name} ${v.size}`,
-        product_id: v.products.id, variation_id: 0,
+        product_id: v.id, variation_id: 0,
         quantity: item.quantity, sku: v.sku,
         price: (item.unit_price_cents / 100).toFixed(2),
         subtotal: total.toFixed(2), total: total.toFixed(2),
