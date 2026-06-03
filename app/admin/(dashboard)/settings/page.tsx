@@ -67,7 +67,7 @@ export default async function SettingsPage({
                 <li><code className="font-mono text-xs">QUICKBOOKS_CLIENT_ID</code></li>
                 <li><code className="font-mono text-xs">QUICKBOOKS_CLIENT_SECRET</code></li>
                 <li><code className="font-mono text-xs">QUICKBOOKS_REDIRECT_URI</code> — set to{' '}
-                  <code className="font-mono text-xs">https://goodfolks.coffee/api/integrations/quickbooks/callback</code>
+                  <code className="font-mono text-xs">https://www.goodfolks.coffee/api/integrations/quickbooks/callback</code>
                 </li>
               </ul>
               <p className="text-xs text-amber-600 pt-1">
