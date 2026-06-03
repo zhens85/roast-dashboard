@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   const products = (data ?? []).map((v) => {
-    const product = v.products as { id: number; name: string } | null
+    const product = v.products as unknown as { id: number; name: string } | null
     return {
       id:          v.id,
       name:        product ? `${product.name} ${v.size}` : v.sku,
