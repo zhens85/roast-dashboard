@@ -5,6 +5,21 @@ function isAuthenticated(request: NextRequest): boolean {
   return request.cookies.get('roast_session')?.value === 'authenticated'
 }
 
+// GET /api/variants — list available variants with their product name
+export async function GET(request: NextRequest) {
+  if (!isAuthenticated(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const supabase = createServerSupabaseClient()
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('id, sku, size, price_cents, products(id, name)')
+    .eq('is_available', true)
+    .order('sku')
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data ?? [])
+}
+
 // POST /api/variants — create a new product variant
 export async function POST(request: NextRequest) {
   if (!isAuthenticated(request)) {

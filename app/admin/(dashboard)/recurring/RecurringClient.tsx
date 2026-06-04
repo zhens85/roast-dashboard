@@ -1,6 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+
+interface AvailableVariant {
+  id: number
+  sku: string
+  size: string
+  price_cents: number
+  products: { id: number; name: string } | null
+}
 
 const PAUSED_DATE   = '2099-01-01'
 const WINDOW_DAYS   = 42   // 6 weeks
@@ -183,21 +191,48 @@ function OccurrenceCard({
   const [editDate, setEditDate]       = useState(order.scheduled_for && order.scheduled_for !== PAUSED_DATE ? order.scheduled_for : todayISO())
   const [editInterval, setEditInterval] = useState(order.recurring_interval ?? 'biweekly')
 
+  // Add-item state
+  const [availableVariants, setAvailableVariants] = useState<AvailableVariant[]>([])
+  const [selectedVariantId, setSelectedVariantId] = useState('')
+  const [addQty, setAddQty]                       = useState(1)
+  const [pendingNewItems, setPendingNewItems]      = useState<Array<{ variantId: number; qty: number; label: string }>>([])
+
+  useEffect(() => {
+    if (!editing) return
+    fetch('/api/variants').then(r => r.json()).then((data: AvailableVariant[]) => {
+      setAvailableVariants(data)
+      if (data.length > 0) setSelectedVariantId(String(data[0].id))
+    }).catch(() => {})
+  }, [editing])
+
   function startEdit() {
     setEditNotes(order.notes ?? '')
     setEditQtys(Object.fromEntries(order.order_items.map(i => [i.id, i.quantity])))
     setEditDate(order.scheduled_for && order.scheduled_for !== PAUSED_DATE ? order.scheduled_for : todayISO())
     setEditInterval(order.recurring_interval ?? 'biweekly')
+    setPendingNewItems([])
+    setAddQty(1)
     setError(null)
     setEditing(true)
+  }
+
+  function handleAddItem() {
+    const variant = availableVariants.find(v => v.id === Number(selectedVariantId))
+    if (!variant) return
+    const label = `${variant.products?.name ?? variant.sku} ${variant.size}`
+    setPendingNewItems(prev => [...prev, { variantId: variant.id, qty: addQty, label }])
+    setAddQty(1)
   }
 
   async function saveEdit() {
     setSaving(true); setError(null)
     try {
-      const items = Object.entries(editQtys).map(([id, qty]) => ({ id: Number(id), quantity: Number(qty) }))
+      const items    = Object.entries(editQtys).map(([id, qty]) => ({ id: Number(id), quantity: Number(qty) }))
+      const newItems = pendingNewItems.map(i => ({ product_variant_id: i.variantId, quantity: i.qty }))
       const updated: RecurringOrder = await apiFetch(`/api/orders/${order.id}`, 'PATCH', {
-        notes: editNotes, scheduled_for: editDate, recurring_interval: editInterval, items,
+        notes: editNotes, scheduled_for: editDate, recurring_interval: editInterval,
+        items,
+        ...(newItems.length > 0 ? { new_items: newItems } : {}),
       })
       onUpdate(updated)
       setEditing(false)
@@ -288,6 +323,43 @@ function OccurrenceCard({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Add item */}
+          <div>
+            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">Add Coffee</p>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <select value={selectedVariantId} onChange={e => setSelectedVariantId(e.target.value)}
+                        className={inputCls}>
+                  {availableVariants.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.products?.name} {v.size} — ${(v.price_cents/100).toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-16">
+                <input type="number" min="1" max="99" value={addQty}
+                       onChange={e => setAddQty(Math.max(1, parseInt(e.target.value)||1))}
+                       className={inputCls + ' text-center'} />
+              </div>
+              <button onClick={handleAddItem}
+                      className="bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 text-xs font-medium px-3 py-2 rounded-lg whitespace-nowrap">
+                + Add
+              </button>
+            </div>
+            {pendingNewItems.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {pendingNewItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs bg-amber-50 border border-amber-100 rounded px-2 py-1">
+                    <span className="text-stone-700">{item.qty}× {item.label}</span>
+                    <button onClick={() => setPendingNewItems(prev => prev.filter((_, idx) => idx !== i))}
+                            className="text-stone-400 hover:text-red-500 ml-2">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Notes */}

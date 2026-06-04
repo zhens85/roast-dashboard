@@ -73,7 +73,7 @@ export async function PATCH(
     updates.recurring_interval = interval ?? null
   }
 
-  // Item quantity changes
+  // Existing item quantity changes
   if (Array.isArray(body.items)) {
     for (const { id: itemId, quantity } of body.items as { id: number; quantity: number }[]) {
       if (quantity <= 0) {
@@ -82,8 +82,29 @@ export async function PATCH(
         await supabase.from('order_items').update({ quantity }).eq('id', itemId).eq('order_id', orderId)
       }
     }
+  }
 
-    // Recalculate total
+  // New items to add (look up current catalog price)
+  if (Array.isArray(body.new_items) && body.new_items.length > 0) {
+    const newItems = body.new_items as { product_variant_id: number; quantity: number }[]
+    const variantIds = newItems.map(i => i.product_variant_id)
+    const { data: variants } = await supabase
+      .from('product_variants')
+      .select('id, price_cents')
+      .in('id', variantIds)
+    const priceMap = Object.fromEntries((variants ?? []).map(v => [v.id, v.price_cents]))
+    await supabase.from('order_items').insert(
+      newItems.map(i => ({
+        order_id:           orderId,
+        product_variant_id: i.product_variant_id,
+        quantity:           i.quantity,
+        unit_price_cents:   priceMap[i.product_variant_id] ?? 0,
+      }))
+    )
+  }
+
+  // Recalculate total from all remaining items
+  if (Array.isArray(body.items) || Array.isArray(body.new_items)) {
     const { data: remaining } = await supabase
       .from('order_items')
       .select('quantity, unit_price_cents')
