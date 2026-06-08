@@ -206,10 +206,13 @@ async function handleExport(request: NextRequest): Promise<NextResponse> {
 
   const today = new Date().toISOString().split('T')[0]  // YYYY-MM-DD
 
-  // Only export orders that are awaiting shipment — this avoids the date-range
-  // problem where an order created before the sync window but due today gets missed.
-  // ShipStation deduplicates by OrderNumber so re-importing is safe.
-  let query = supabase
+  // Only export unshipped (pending/confirmed) orders that are due now.
+  // We intentionally ignore ShipStation's start_date/end_date params:
+  // since we only return unshipped orders, there's no risk of flooding
+  // ShipStation with historical data, and every sync always returns the
+  // full current queue. ShipStation deduplicates by OrderNumber so
+  // re-importing an existing order just updates it.
+  const query = supabase
     .from('orders')
     .select(`
       *,
@@ -224,25 +227,9 @@ async function handleExport(request: NextRequest): Promise<NextResponse> {
       )
     `)
     .in('status', ['pending', 'confirmed'])
-    // Don't export orders whose scheduled_for date hasn't arrived yet
+    // Only orders whose due date has arrived (future-dated and paused excluded)
     .or(`scheduled_for.is.null,scheduled_for.lte.${today}`)
     .order('created_at', { ascending: false })
-
-  // ShipStation date-range params: filter by scheduled_for when set (the due date),
-  // falling back to created_at for non-recurring orders.
-  // This ensures an order created June 3 but due June 7 appears in a June 7+ sync.
-  if (startDate) {
-    const afterISO = startDate.toISOString()
-    query = query.or(
-      `and(scheduled_for.is.null,created_at.gte.${afterISO}),scheduled_for.gte.${afterISO}`
-    )
-  }
-  if (endDate) {
-    const beforeISO = endDate.toISOString()
-    query = query.or(
-      `and(scheduled_for.is.null,created_at.lte.${beforeISO}),scheduled_for.lte.${beforeISO}`
-    )
-  }
 
   const { data: orders, error } = await query
 
