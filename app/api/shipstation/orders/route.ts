@@ -153,9 +153,9 @@ function buildOrderXml(order: DashboardOrder): string {
   <Order>
     <OrderID>${order.id}</OrderID>
     <OrderNumber>${order.id}</OrderNumber>
-    <OrderDate>${fmt(order.created_at)}</OrderDate>
+    <OrderDate>${fmt(order.scheduled_for ? order.scheduled_for + 'T07:00:00Z' : order.created_at)}</OrderDate>
     <OrderStatus>awaiting_shipment</OrderStatus>
-    <LastModified>${fmt(order.created_at)}</LastModified>
+    <LastModified>${fmt(order.scheduled_for ? order.scheduled_for + 'T07:00:00Z' : order.created_at)}</LastModified>
     <ShippingMethod></ShippingMethod>
     <PaymentMethod>${p ? 'Invoice' : 'Shopify'}</PaymentMethod>
     <OrderTotal>${total}</OrderTotal>
