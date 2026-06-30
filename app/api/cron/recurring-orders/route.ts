@@ -180,6 +180,58 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Send a confirmation email to each account owner whose recurring order processed today
+  if (process.env.RESEND_API_KEY) {
+    for (const o of todayOrders) {
+      const p = o.partners as unknown as { company_name: string; email: string } | null
+      if (!p?.email) continue
+
+      const items = (o.order_items ?? []) as unknown as Array<{
+        quantity: number; unit_price_cents: number
+        product_variants: { size: string; products: { name: string } }
+      }>
+      const itemRows = items.map(i => `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;">${i.product_variants?.products?.name} ${i.product_variants?.size}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center;">${i.quantity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;">${fmtPrice(i.quantity * i.unit_price_cents)}</td>
+        </tr>`).join('')
+
+      try {
+        await resend.emails.send({
+          from:    FROM_ADDRESS,
+          to:      p.email,
+          subject: `Your Good Folks Wholesale Order #${o.id} Has Been Placed`,
+          html: `
+            <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+              <h2 style="color:#3b4858;margin:0 0 16px;">Order Confirmed</h2>
+              <p style="color:#777;margin:0 0 16px;">Hi ${p.company_name}, your recurring order #${o.id} has been placed and is being prepared for shipment.</p>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <thead style="background:#fafafa;">
+                  <tr>
+                    <th style="padding:8px 12px;text-align:left;color:#999;font-size:11px;text-transform:uppercase;">Item</th>
+                    <th style="padding:8px 12px;text-align:center;color:#999;font-size:11px;text-transform:uppercase;">Qty</th>
+                    <th style="padding:8px 12px;text-align:right;color:#999;font-size:11px;text-transform:uppercase;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>${itemRows}</tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="2" style="padding:10px 12px;font-weight:600;">Order Total</td>
+                    <td style="padding:10px 12px;font-weight:600;text-align:right;">${fmtPrice(o.total_amount_cents)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+              <p style="color:#777;margin:20px 0 0;font-size:13px;">You'll receive a separate email with tracking info once your order ships.</p>
+            </div>`,
+        })
+        console.log(`[Cron] Confirmation email sent to ${p.email} for order ${o.id}`)
+      } catch (emailErr) {
+        console.error(`[Cron] Confirmation email failed for order ${o.id}:`, emailErr)
+      }
+    }
+  }
+
   return NextResponse.json({
     checked:  orders.length,
     due_today: todayOrders.length,

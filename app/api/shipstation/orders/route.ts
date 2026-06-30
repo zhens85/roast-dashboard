@@ -17,18 +17,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import type { DashboardOrder } from '@/types'
 
-function nextOccurrenceDate(dateISO: string, interval: string | null): string {
-  const d = new Date(dateISO + 'T12:00:00Z')
-  switch (interval) {
-    case 'weekly':        d.setUTCDate(d.getUTCDate() + 7);   break
-    case 'monthly':       d.setUTCMonth(d.getUTCMonth() + 1); break
-    case 'every_6_weeks': d.setUTCDate(d.getUTCDate() + 42);  break
-    case 'every_8_weeks': d.setUTCDate(d.getUTCDate() + 56);  break
-    default:              d.setUTCDate(d.getUTCDate() + 14);  break
-  }
-  return d.toISOString().split('T')[0]
-}
-
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 function isAuthorized(request: NextRequest): boolean {
@@ -273,14 +261,11 @@ async function handleShipNotify(request: NextRequest): Promise<NextResponse> {
 
   const supabase = createServerSupabaseClient()
 
-  // Fetch the order before updating (need recurring fields for next-occurrence logic)
-  const { data: orderData } = await supabase
-    .from('orders')
-    .select('id, partner_id, total_amount_cents, notes, is_recurring, recurring_interval, scheduled_for, location_id, order_items(product_variant_id, quantity, unit_price_cents)')
-    .eq('id', orderId)
-    .single()
-
-  // Mark the order as shipped and store tracking info
+  // Mark the order as shipped and store tracking info.
+  // Next-occurrence creation for recurring orders is handled exclusively by
+  // the 2am EST cron job (app/api/cron/recurring-orders/route.ts) — do not
+  // duplicate that logic here, since both this webhook and the cron firing
+  // on the same day previously created two next-occurrence orders.
   const { error } = await supabase
     .from('orders')
     .update({
@@ -295,43 +280,6 @@ async function handleShipNotify(request: NextRequest): Promise<NextResponse> {
   if (error) {
     console.error(`ShipStation shipnotify DB error for order ${orderId}:`, error)
     return new NextResponse('Internal Server Error', { status: 500 })
-  }
-
-  // For recurring orders, create the next occurrence now that this one has shipped
-  if (orderData?.is_recurring && orderData.partner_id && orderData.scheduled_for) {
-    const nextDate = nextOccurrenceDate(orderData.scheduled_for, orderData.recurring_interval)
-
-    const { data: newOrder, error: insertErr } = await supabase
-      .from('orders')
-      .insert({
-        partner_id:         orderData.partner_id,
-        status:             'confirmed',
-        total_amount_cents: orderData.total_amount_cents,
-        notes:              orderData.notes ?? null,
-        is_recurring:       true,
-        recurring_interval: orderData.recurring_interval,
-        scheduled_for:      nextDate,
-        location_id:        orderData.location_id ?? null,
-      })
-      .select('id')
-      .single()
-
-    if (!insertErr && newOrder) {
-      const items = (orderData.order_items ?? []).map(
-        (item: { product_variant_id: number; quantity: number; unit_price_cents: number }) => ({
-          order_id:           newOrder.id,
-          product_variant_id: item.product_variant_id,
-          quantity:           item.quantity,
-          unit_price_cents:   item.unit_price_cents,
-        })
-      )
-      if (items.length > 0) {
-        await supabase.from('order_items').insert(items)
-      }
-      console.log(`Recurring order ${orderId} shipped → next occurrence created as order ${newOrder.id} (scheduled_for: ${nextDate})`)
-    } else if (insertErr) {
-      console.error(`Failed to create next occurrence for recurring order ${orderId}:`, insertErr.message)
-    }
   }
 
   console.log(`Order ${orderId} marked shipped — carrier: ${carrier}, tracking: ${trackingNumber}`)
