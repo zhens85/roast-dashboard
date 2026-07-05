@@ -71,14 +71,16 @@ export async function GET(request: NextRequest) {
 
     const nextDate = nextOccurrenceDate(order.scheduled_for, order.recurring_interval)
 
-    // Check if a next occurrence already exists for this partner on that date
+    // Check if a next occurrence already exists for this partner on that date.
+    // Include shipped orders in the check — if the date's order already shipped,
+    // we don't want to create another (the zombie-chain bug).
     const { data: existing } = await supabase
       .from('orders')
       .select('id')
       .eq('partner_id', order.partner_id)
       .eq('is_recurring', true)
       .eq('scheduled_for', nextDate)
-      .in('status', ['confirmed', 'pending'])
+      .neq('status', 'cancelled')
       .limit(1)
 
     if (existing && existing.length > 0) {
